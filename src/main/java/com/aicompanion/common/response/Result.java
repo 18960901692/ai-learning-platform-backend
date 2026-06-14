@@ -1,4 +1,4 @@
-package com.aicompanion.common;
+package com.aicompanion.common.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

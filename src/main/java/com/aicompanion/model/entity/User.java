@@ -1,4 +1,4 @@
-package com.aicompanion.entity;
+package com.aicompanion.model.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -51,4 +51,14 @@ public class User extends BaseEntity {
      * 状态：0-禁用 1-正常
      */
     private Integer status;
+
+    /**
+     * 记住密码 Token（刷新令牌）
+     */
+    private String refreshToken;
+
+    /**
+     * 刷新令牌过期时间
+     */
+    private java.time.LocalDateTime refreshTokenExpireTime;
 }

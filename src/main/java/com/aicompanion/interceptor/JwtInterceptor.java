@@ -1,8 +1,9 @@
 package com.aicompanion.interceptor;
 
-import com.aicompanion.util.JwtUtil;
+import com.aicompanion.common.response.Result;
+import com.aicompanion.common.util.JwtUtil;
+import com.aicompanion.common.util.SecurityUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.aicompanion.common.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * JWT 拦截器：校验 Token 有效性，并将 userId 存入 request attribute
+ * JWT 拦截器：校验 Token 有效性，并将用户信息存入 request attribute
  */
 @Slf4j
 @Component
@@ -23,12 +24,7 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String token = request.getHeader("Authorization");
-
-        // 去除 "Bearer " 前缀
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
+        String token = SecurityUtil.extractToken(request);
 
         if (token == null || token.isBlank()) {
             writeError(response, 401, "未登录，请先登录");
@@ -40,9 +36,11 @@ public class JwtInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // 将用户ID存入 request，供 Controller 使用
+        // 将用户信息存入 request
         Long userId = jwtUtil.getUserId(token);
-        request.setAttribute("userId", userId);
+        String role = jwtUtil.getRole(token);
+        SecurityUtil.setCurrentUser(request, userId, role);
+
         return true;
     }
 

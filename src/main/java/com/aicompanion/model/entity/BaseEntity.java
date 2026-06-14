@@ -1,4 +1,4 @@
-package com.aicompanion.entity;
+package com.aicompanion.model.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;

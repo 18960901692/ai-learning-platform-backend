@@ -1,4 +1,4 @@
-package com.aicompanion.vo;
+package com.aicompanion.model.vo;
 
 import lombok.Data;
 

@@ -1,10 +1,11 @@
 package com.aicompanion.service;
 
-import com.aicompanion.dto.LoginDTO;
-import com.aicompanion.dto.RegisterDTO;
-import com.aicompanion.dto.UserDTO;
-import com.aicompanion.vo.LoginVO;
-import com.aicompanion.vo.UserVO;
+import com.aicompanion.model.dto.LoginDTO;
+import com.aicompanion.model.dto.RefreshTokenDTO;
+import com.aicompanion.model.dto.RegisterDTO;
+import com.aicompanion.model.dto.UserDTO;
+import com.aicompanion.model.vo.LoginVO;
+import com.aicompanion.model.vo.UserVO;
 
 /**
  * 用户服务接口
@@ -22,6 +23,11 @@ public interface UserService {
     LoginVO login(LoginDTO dto);
 
     /**
+     * 刷新令牌（记住密码免登录）
+     */
+    LoginVO refreshToken(RefreshTokenDTO dto);
+
+    /**
      * 获取用户信息
      */
     UserVO getUserInfo(Long userId);
@@ -30,4 +36,9 @@ public interface UserService {
      * 更新用户信息
      */
     UserVO updateUser(Long userId, UserDTO dto);
+
+    /**
+     * 退出登录（清除刷新令牌）
+     */
+    void logout(Long userId);
 }

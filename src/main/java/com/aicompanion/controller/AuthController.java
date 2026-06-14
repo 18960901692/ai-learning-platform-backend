@@ -1,17 +1,21 @@
 package com.aicompanion.controller;
 
-import com.aicompanion.common.Result;
-import com.aicompanion.dto.LoginDTO;
-import com.aicompanion.dto.RegisterDTO;
+import com.aicompanion.common.response.Result;
+import com.aicompanion.model.dto.LoginDTO;
+import com.aicompanion.model.dto.RefreshTokenDTO;
+import com.aicompanion.model.dto.RegisterDTO;
+import com.aicompanion.model.vo.LoginVO;
 import com.aicompanion.service.UserService;
-import com.aicompanion.vo.LoginVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 认证控制器（注册、登录）
+ * 认证控制器（注册、登录、刷新令牌）
  */
+@Tag(name = "认证管理", description = "用户注册、登录、刷新令牌相关接口")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -21,8 +25,8 @@ public class AuthController {
 
     /**
      * 用户注册
-     * POST /api/auth/register
      */
+    @Operation(summary = "用户注册", description = "注册新用户账号")
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterDTO dto) {
         userService.register(dto);
@@ -31,11 +35,36 @@ public class AuthController {
 
     /**
      * 用户登录
-     * POST /api/auth/login
      */
+    @Operation(summary = "用户登录", description = "账号密码登录，支持记住密码功能")
     @PostMapping("/login")
     public Result<LoginVO> login(@Valid @RequestBody LoginDTO dto) {
         LoginVO loginVO = userService.login(dto);
         return Result.success("登录成功", loginVO);
+    }
+
+    /**
+     * 刷新令牌（记住密码免登录）
+     */
+    @Operation(summary = "刷新令牌", description = "使用刷新令牌获取新的访问令牌（记住密码免登录）")
+    @PostMapping("/refresh")
+    public Result<LoginVO> refreshToken(@Valid @RequestBody RefreshTokenDTO dto) {
+        LoginVO loginVO = userService.refreshToken(dto);
+        return Result.success("刷新成功", loginVO);
+    }
+
+    /**
+     * 退出登录
+     * 注意：/auth/** 路径被拦截器排除，因此 userId 不会被自动注入
+     * 使用 required = false 避免 MissingRequestAttributeException
+     */
+    @Operation(summary = "退出登录", description = "清除刷新令牌，退出登录状态")
+    @PostMapping("/logout")
+    public Result<Void> logout(@RequestAttribute(required = false) Long userId) {
+        if (userId == null) {
+            return Result.success("已退出登录", null);
+        }
+        userService.logout(userId);
+        return Result.success("退出成功", null);
     }
 }

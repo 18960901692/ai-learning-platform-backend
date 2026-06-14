@@ -1,5 +1,6 @@
-package com.aicompanion.common;
+package com.aicompanion.common.exception;
 
+import com.aicompanion.common.response.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindException;
@@ -19,12 +20,22 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     /**
-     * 处理业务异常（RuntimeException）
+     * 处理业务异常
+     */
+    @ExceptionHandler(BusinessException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public Result<Void> handleBusinessException(BusinessException e) {
+        log.error("业务异常: {}", e.getMessage(), e);
+        return Result.fail(e.getCode(), e.getMessage());
+    }
+
+    /**
+     * 处理运行时异常
      */
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleRuntimeException(RuntimeException e) {
-        log.error("业务异常: {}", e.getMessage(), e);
+        log.error("运行时异常: {}", e.getMessage(), e);
         return Result.fail(e.getMessage());
     }
 

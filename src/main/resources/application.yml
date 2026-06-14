@@ -16,7 +16,7 @@ spring:
 # MyBatis-Plus 配置
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.aicompanion.entity
+  type-aliases-package: com.aicompanion.model.entity
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -31,5 +31,14 @@ mybatis-plus:
 jwt:
   # 密钥（至少 32 字节，即 256 位）
   secret: aic0mpani0n2024SecretKeyForJWTToken!!
-  # Token 有效期（毫秒）：24 小时
+  # 访问 Token 有效期（毫秒）：24 小时
   expiration: 86400000
+  # 刷新 Token 有效期（毫秒）：7 天（用于记住密码）
+  refresh-expiration: 604800000
+
+# Swagger/OpenAPI 配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

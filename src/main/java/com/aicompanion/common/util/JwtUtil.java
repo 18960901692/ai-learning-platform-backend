@@ -1,4 +1,4 @@
-package com.aicompanion.util;
+package com.aicompanion.common.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * JWT 工具类
@@ -22,6 +23,9 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
+
     /**
      * 获取签名密钥
      */
@@ -31,7 +35,7 @@ public class JwtUtil {
     }
 
     /**
-     * 生成 Token
+     * 生成访问 Token
      */
     public String generateToken(Long userId, String username, String role) {
         Date now = new Date();
@@ -41,10 +45,34 @@ public class JwtUtil {
                 .subject(userId.toString())
                 .claim("username", username)
                 .claim("role", role)
+                .claim("type", "access")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    /**
+     * 生成刷新 Token（用于"记住密码"）
+     */
+    public String generateRefreshToken(Long userId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshExpiration);
+
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("type", "refresh")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    /**
+     * 生成随机刷新令牌（存储到数据库）
+     */
+    public String generateRandomRefreshToken() {
+        return UUID.randomUUID().toString().replace("-", "");
     }
 
     /**
@@ -67,6 +95,14 @@ public class JwtUtil {
     }
 
     /**
+     * 从 Token 中获取角色
+     */
+    public String getRole(String token) {
+        Claims claims = parseToken(token);
+        return claims.get("role", String.class);
+    }
+
+    /**
      * 验证 Token 是否有效（未过期）
      */
     public boolean validateToken(String token) {
@@ -76,5 +112,20 @@ public class JwtUtil {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * 获取 Token 过期时间
+     */
+    public Date getExpirationDate(String token) {
+        Claims claims = parseToken(token);
+        return claims.getExpiration();
+    }
+
+    /**
+     * 获取刷新令牌过期时间（毫秒）
+     */
+    public long getRefreshExpiration() {
+        return refreshExpiration;
     }
 }
