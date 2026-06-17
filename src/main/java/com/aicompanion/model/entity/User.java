@@ -43,6 +43,16 @@ public class User extends BaseEntity {
     private String avatar;
 
     /**
+     * 职业/专业
+     */
+    private String profession;
+
+    /**
+     * 个人简介
+     */
+    private String bio;
+
+    /**
      * 角色：STUDENT / TEACHER / ADMIN
      */
     private String role;

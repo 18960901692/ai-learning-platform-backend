@@ -196,6 +196,12 @@ public class UserServiceImpl implements UserService {
         if (dto.getAvatar() != null) {
             user.setAvatar(dto.getAvatar());
         }
+        if (dto.getProfession() != null) {
+            user.setProfession(dto.getProfession());
+        }
+        if (dto.getBio() != null) {
+            user.setBio(dto.getBio());
+        }
 
         userMapper.updateById(user);
         log.info("用户信息更新成功: userId={}", userId);
@@ -227,6 +233,8 @@ public class UserServiceImpl implements UserService {
         vo.setEmail(user.getEmail());
         vo.setPhone(user.getPhone());
         vo.setAvatar(user.getAvatar());
+        vo.setProfession(user.getProfession());
+        vo.setBio(user.getBio());
         vo.setRole(user.getRole());
         vo.setStatus(user.getStatus());
         vo.setCreateTime(user.getCreateTime());

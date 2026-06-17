@@ -48,16 +48,11 @@ public class UserController {
      * 更新用户信息
      */
     @Operation(summary = "更新用户信息", description = "更新当前用户的个人信息")
-    @PutMapping("/{id}")
-    public Result<UserVO> updateUser(@PathVariable Long id,
-                                     @Valid @RequestBody UserDTO dto,
+    @PutMapping("/me")
+    public Result<UserVO> updateUser(@Valid @RequestBody UserDTO dto,
                                      HttpServletRequest request) {
-        // 校验权限：只能修改自己的信息（管理员除外）
-        Long currentUserId = SecurityUtil.getCurrentUserId(request);
-        if (!currentUserId.equals(id) && !SecurityUtil.isAdmin(request)) {
-            throw new RuntimeException("无权修改他人信息");
-        }
-        UserVO userVO = userService.updateUser(id, dto);
+        Long userId = SecurityUtil.getCurrentUserId(request);
+        UserVO userVO = userService.updateUser(userId, dto);
         return Result.success("更新成功", userVO);
     }
 }

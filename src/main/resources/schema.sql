@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS sys_user (
     email                    VARCHAR(100) DEFAULT NULL    COMMENT '邮箱',
     phone                    VARCHAR(20)  DEFAULT NULL    COMMENT '手机号',
     avatar                   VARCHAR(500) DEFAULT NULL    COMMENT '头像URL',
+    profession               VARCHAR(100) DEFAULT NULL    COMMENT '职业/专业',
+    bio                      VARCHAR(500) DEFAULT NULL    COMMENT '个人简介',
     role                     VARCHAR(20)  NOT NULL DEFAULT 'STUDENT' COMMENT '角色：STUDENT/TEACHER/ADMIN',
     status                   TINYINT      NOT NULL DEFAULT 1          COMMENT '状态：0-禁用 1-正常',
     refresh_token            VARCHAR(100) DEFAULT NULL    COMMENT '刷新令牌（记住密码）',
