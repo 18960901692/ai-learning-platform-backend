@@ -9,6 +9,10 @@ spring:
     url: jdbc:mysql://localhost:3306/ai_learning_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
     password: 18765105
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai

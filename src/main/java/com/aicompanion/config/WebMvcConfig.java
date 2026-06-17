@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -32,8 +33,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/swagger-ui.html",      // Swagger UI 入口页
                         "/v3/api-docs/**",       // OpenAPI 文档
                         "/swagger-resources/**",
-                        "/webjars/**"
+                        "/webjars/**",
+                        "/uploads/**"            // 静态资源放行
                 );
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:./uploads/");
     }
 
     /**
