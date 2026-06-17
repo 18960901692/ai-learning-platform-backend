@@ -41,4 +41,9 @@ public interface UserService {
      * 退出登录（清除刷新令牌）
      */
     void logout(Long userId);
+
+    /**
+     * 更新用户头像
+     */
+    UserVO updateAvatar(Long userId, String avatarUrl);
 }

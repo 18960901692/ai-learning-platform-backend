@@ -223,6 +223,21 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
+     * 更新用户头像
+     */
+    @Override
+    public UserVO updateAvatar(Long userId, String avatarUrl) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        user.setAvatar(avatarUrl);
+        userMapper.updateById(user);
+        log.info("用户头像更新成功: userId={}, avatarUrl={}", userId, avatarUrl);
+        return toUserVO(user);
+    }
+
+    /**
      * Entity → UserVO（过滤密码）
      */
     private UserVO toUserVO(User user) {
