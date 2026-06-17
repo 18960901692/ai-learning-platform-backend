@@ -2,6 +2,7 @@ package com.aicompanion.controller;
 
 import com.aicompanion.common.response.Result;
 import com.aicompanion.common.util.SecurityUtil;
+import com.aicompanion.config.WebMvcConfig;
 import com.aicompanion.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,9 +27,10 @@ import java.util.UUID;
 public class FileController {
 
     private final UserService userService;
+    private final WebMvcConfig webMvcConfig;
 
-    // 头像存储目录
-    private static final String AVATAR_UPLOAD_DIR = "uploads/avatars/";
+    // 头像存储子目录
+    private static final String AVATAR_SUB_DIR = "avatars/";
 
     // 允许的文件类型
     private static final String[] ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"};
@@ -57,10 +59,15 @@ public class FileController {
             return Result.fail(400, "只支持 jpg/png/gif/webp 格式");
         }
 
-        // 2. 确保目录存在
-        File uploadDir = new File(AVATAR_UPLOAD_DIR);
+        // 2. 确保目录存在（使用绝对路径）
+        String uploadPath = webMvcConfig.getUploadAbsolutePath() + File.separator + AVATAR_SUB_DIR;
+        File uploadDir = new File(uploadPath);
         if (!uploadDir.exists()) {
-            uploadDir.mkdirs();
+            boolean created = uploadDir.mkdirs();
+            if (!created) {
+                log.error("创建上传目录失败: {}", uploadPath);
+                return Result.fail(500, "服务器配置错误");
+            }
         }
 
         // 3. 生成唯一文件名
@@ -75,13 +82,14 @@ public class FileController {
         File destFile = new File(uploadDir, fileName);
         try {
             file.transferTo(destFile);
+            log.info("文件保存成功: {}", destFile.getAbsolutePath());
         } catch (IOException e) {
-            log.error("头像上传失败: userId={}", userId, e);
+            log.error("头像上传失败: userId={}, path={}", userId, destFile.getAbsolutePath(), e);
             return Result.fail(500, "文件保存失败");
         }
 
         // 5. 更新数据库
-        String avatarUrl = "/api/uploads/avatars/" + fileName;
+        String avatarUrl = "/uploads/avatars/" + fileName;
         userService.updateAvatar(userId, avatarUrl);
 
         log.info("头像上传成功: userId={}, url={}", userId, avatarUrl);
