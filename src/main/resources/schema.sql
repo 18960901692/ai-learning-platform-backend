@@ -26,3 +26,15 @@ CREATE TABLE IF NOT EXISTS sys_user (
     UNIQUE KEY uk_email (email),
     KEY idx_refresh_token (refresh_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户表';
+
+-- 技能树表
+CREATE TABLE IF NOT EXISTS skill_tree (
+    id                       BIGINT       NOT NULL        COMMENT '主键ID（雪花算法）',
+    name                     VARCHAR(100) NOT NULL        COMMENT '技能名称',
+    category                 VARCHAR(50)  NOT NULL        COMMENT '分类：FRONTEND/BACKEND/TOOL/BASIC',
+    description              VARCHAR(500) DEFAULT NULL    COMMENT '技能描述',
+    status                   TINYINT      NOT NULL DEFAULT 1          COMMENT '状态：0-禁用 1-启用',
+    create_time              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='技能树表';
