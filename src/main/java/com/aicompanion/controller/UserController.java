@@ -1,7 +1,9 @@
 package com.aicompanion.controller;
 
+import com.aicompanion.common.response.PageResult;
 import com.aicompanion.common.response.Result;
 import com.aicompanion.common.util.SecurityUtil;
+import com.aicompanion.model.dto.CreateUserDTO;
 import com.aicompanion.model.dto.UserDTO;
 import com.aicompanion.model.vo.UserVO;
 import com.aicompanion.service.UserService;
@@ -54,5 +56,28 @@ public class UserController {
         Long userId = SecurityUtil.getCurrentUserId(request);
         UserVO userVO = userService.updateUser(userId, dto);
         return Result.success("更新成功", userVO);
+    }
+
+    /**
+     * 分页查询用户列表（管理员）
+     */
+    @Operation(summary = "分页查询用户列表", description = "管理员分页查询所有用户，支持按用户名/昵称搜索")
+    @GetMapping("/list")
+    public Result<PageResult<UserVO>> getUserList(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String keyword) {
+        PageResult<UserVO> result = userService.getUserList(page, pageSize, keyword);
+        return Result.success(result);
+    }
+
+    /**
+     * 新增用户（管理员）
+     */
+    @Operation(summary = "新增用户", description = "管理员创建新用户")
+    @PostMapping
+    public Result<UserVO> createUser(@Valid @RequestBody CreateUserDTO dto) {
+        UserVO userVO = userService.createUser(dto);
+        return Result.success("新增成功", userVO);
     }
 }

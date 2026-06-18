@@ -1,5 +1,7 @@
 package com.aicompanion.service;
 
+import com.aicompanion.common.response.PageResult;
+import com.aicompanion.model.dto.CreateUserDTO;
 import com.aicompanion.model.dto.LoginDTO;
 import com.aicompanion.model.dto.RefreshTokenDTO;
 import com.aicompanion.model.dto.RegisterDTO;
@@ -46,4 +48,14 @@ public interface UserService {
      * 更新用户头像
      */
     UserVO updateAvatar(Long userId, String avatarUrl);
+
+    /**
+     * 分页查询用户列表
+     */
+    PageResult<UserVO> getUserList(int page, int pageSize, String keyword);
+
+    /**
+     * 管理员新增用户
+     */
+    UserVO createUser(CreateUserDTO dto);
 }

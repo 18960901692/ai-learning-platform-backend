@@ -1,8 +1,10 @@
 package com.aicompanion.service.impl;
 
 import com.aicompanion.common.exception.BusinessException;
+import com.aicompanion.common.response.PageResult;
 import com.aicompanion.common.util.JwtUtil;
 import com.aicompanion.mapper.UserMapper;
+import com.aicompanion.model.dto.CreateUserDTO;
 import com.aicompanion.model.dto.LoginDTO;
 import com.aicompanion.model.dto.RefreshTokenDTO;
 import com.aicompanion.model.dto.RegisterDTO;
@@ -12,12 +14,15 @@ import com.aicompanion.model.vo.LoginVO;
 import com.aicompanion.model.vo.UserVO;
 import com.aicompanion.service.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 用户服务实现类
@@ -254,5 +259,70 @@ public class UserServiceImpl implements UserService {
         vo.setStatus(user.getStatus());
         vo.setCreateTime(user.getCreateTime());
         return vo;
+    }
+
+    /**
+     * 分页查询用户列表
+     */
+    @Override
+    public PageResult<UserVO> getUserList(int page, int pageSize, String keyword) {
+        Page<User> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w
+                    .like(User::getUsername, keyword)
+                    .or()
+                    .like(User::getNickname, keyword)
+            );
+        }
+
+        wrapper.orderByDesc(User::getCreateTime);
+
+        Page<User> result = userMapper.selectPage(pageParam, wrapper);
+
+        List<UserVO> voList = result.getRecords().stream()
+                .map(this::toUserVO)
+                .toList();
+
+        return PageResult.of(result.getTotal(), voList, result.getCurrent(), result.getSize());
+    }
+
+    /**
+     * 管理员新增用户
+     */
+    @Override
+    public UserVO createUser(CreateUserDTO dto) {
+        // 1. 检查用户名是否已存在
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getUsername, dto.getUsername());
+        Long count = userMapper.selectCount(wrapper);
+        if (count > 0) {
+            throw new BusinessException(400, "用户名已存在");
+        }
+
+        // 2. 检查邮箱是否已存在
+        LambdaQueryWrapper<User> emailWrapper = new LambdaQueryWrapper<>();
+        emailWrapper.eq(User::getEmail, dto.getEmail());
+        Long emailCount = userMapper.selectCount(emailWrapper);
+        if (emailCount > 0) {
+            throw new BusinessException(400, "邮箱已被注册");
+        }
+
+        // 3. 构建用户
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setNickname(StringUtils.hasText(dto.getNickname()) ? dto.getNickname() : dto.getUsername());
+        user.setEmail(dto.getEmail());
+        user.setPhone(dto.getPhone());
+        user.setRole(StringUtils.hasText(dto.getRole()) ? dto.getRole() : "STUDENT");
+        user.setStatus(1);
+
+        // 4. 插入数据库
+        userMapper.insert(user);
+        log.info("管理员新增用户成功: {}", dto.getUsername());
+
+        return toUserVO(user);
     }
 }
