@@ -1,5 +1,6 @@
 package com.aicompanion.model.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -71,4 +72,10 @@ public class User extends BaseEntity {
      * 刷新令牌过期时间
      */
     private java.time.LocalDateTime refreshTokenExpireTime;
+
+    /**
+     * 逻辑删除标记：0-未删除 1-已删除
+     */
+    @TableLogic
+    private Integer deleted;
 }

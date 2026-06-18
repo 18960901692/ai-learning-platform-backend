@@ -4,6 +4,7 @@ import com.aicompanion.common.response.PageResult;
 import com.aicompanion.common.response.Result;
 import com.aicompanion.common.util.SecurityUtil;
 import com.aicompanion.model.dto.CreateUserDTO;
+import com.aicompanion.model.dto.UpdateUserDTO;
 import com.aicompanion.model.dto.UserDTO;
 import com.aicompanion.model.vo.UserVO;
 import com.aicompanion.service.UserService;
@@ -80,5 +81,19 @@ public class UserController {
     public Result<UserVO> createUser(@Valid @RequestBody CreateUserDTO dto) {
         UserVO userVO = userService.createUser(dto);
         return Result.success("新增成功", userVO);
+    }
+
+    @Operation(summary = "修改用户信息", description = "管理员修改指定用户的信息")
+    @PutMapping("/{id}")
+    public Result<UserVO> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserDTO dto) {
+        UserVO userVO = userService.updateUserById(id, dto);
+        return Result.success("修改成功", userVO);
+    }
+
+    @Operation(summary = "删除用户", description = "管理员删除指定用户（禁止删除管理员）")
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return Result.success("删除成功", null);
     }
 }

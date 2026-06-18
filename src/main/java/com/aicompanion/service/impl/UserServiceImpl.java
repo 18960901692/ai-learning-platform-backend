@@ -8,6 +8,7 @@ import com.aicompanion.model.dto.CreateUserDTO;
 import com.aicompanion.model.dto.LoginDTO;
 import com.aicompanion.model.dto.RefreshTokenDTO;
 import com.aicompanion.model.dto.RegisterDTO;
+import com.aicompanion.model.dto.UpdateUserDTO;
 import com.aicompanion.model.dto.UserDTO;
 import com.aicompanion.model.entity.User;
 import com.aicompanion.model.vo.LoginVO;
@@ -328,5 +329,77 @@ public class UserServiceImpl implements UserService {
         log.info("管理员新增用户成功: {}", dto.getUsername());
 
         return toUserVO(user);
+    }
+
+    /**
+     * 管理员修改用户信息
+     */
+    @Override
+    public UserVO updateUserById(Long userId, UpdateUserDTO dto) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+
+        // 禁止修改管理员角色
+        if ("ADMIN".equals(user.getRole()) && !"ADMIN".equals(dto.getRole())) {
+            throw new BusinessException(403, "禁止修改管理员角色");
+        }
+
+        // 检查用户名是否被其他用户占用
+        if (!user.getUsername().equals(dto.getUsername())) {
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(User::getUsername, dto.getUsername());
+            Long count = userMapper.selectCount(wrapper);
+            if (count > 0) {
+                throw new BusinessException(400, "用户名已存在");
+            }
+        }
+
+        // 检查邮箱是否被其他用户占用
+        if (!user.getEmail().equals(dto.getEmail())) {
+            LambdaQueryWrapper<User> emailWrapper = new LambdaQueryWrapper<>();
+            emailWrapper.eq(User::getEmail, dto.getEmail());
+            Long emailCount = userMapper.selectCount(emailWrapper);
+            if (emailCount > 0) {
+                throw new BusinessException(400, "邮箱已被使用");
+            }
+        }
+
+        // 更新字段
+        user.setUsername(dto.getUsername());
+        if (StringUtils.hasText(dto.getPassword())) {
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+        user.setNickname(StringUtils.hasText(dto.getNickname()) ? dto.getNickname() : dto.getUsername());
+        user.setEmail(dto.getEmail());
+        user.setPhone(dto.getPhone());
+        if (StringUtils.hasText(dto.getRole())) {
+            user.setRole(dto.getRole());
+        }
+
+        userMapper.updateById(user);
+        log.info("管理员修改用户成功: {}", dto.getUsername());
+
+        return toUserVO(user);
+    }
+
+    /**
+     * 管理员删除用户
+     */
+    @Override
+    public void deleteUser(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+
+        // 禁止删除管理员
+        if ("ADMIN".equals(user.getRole())) {
+            throw new BusinessException(403, "禁止删除管理员");
+        }
+
+        userMapper.deleteById(userId);
+        log.info("管理员删除用户成功: {}", user.getUsername());
     }
 }

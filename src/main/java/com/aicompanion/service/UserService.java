@@ -5,6 +5,7 @@ import com.aicompanion.model.dto.CreateUserDTO;
 import com.aicompanion.model.dto.LoginDTO;
 import com.aicompanion.model.dto.RefreshTokenDTO;
 import com.aicompanion.model.dto.RegisterDTO;
+import com.aicompanion.model.dto.UpdateUserDTO;
 import com.aicompanion.model.dto.UserDTO;
 import com.aicompanion.model.vo.LoginVO;
 import com.aicompanion.model.vo.UserVO;
@@ -58,4 +59,14 @@ public interface UserService {
      * 管理员新增用户
      */
     UserVO createUser(CreateUserDTO dto);
+
+    /**
+     * 管理员修改用户信息
+     */
+    UserVO updateUserById(Long userId, UpdateUserDTO dto);
+
+    /**
+     * 管理员删除用户
+     */
+    void deleteUser(Long userId);
 }

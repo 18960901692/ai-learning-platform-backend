@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     status                   TINYINT      NOT NULL DEFAULT 1          COMMENT '状态：0-禁用 1-正常',
     refresh_token            VARCHAR(100) DEFAULT NULL    COMMENT '刷新令牌（记住密码）',
     refresh_token_expire_time DATETIME    DEFAULT NULL    COMMENT '刷新令牌过期时间',
+    deleted                  TINYINT      NOT NULL DEFAULT 0          COMMENT '逻辑删除：0-未删除 1-已删除',
     create_time              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
