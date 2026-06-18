@@ -265,7 +265,7 @@ public class UserServiceImpl implements UserService {
      * 分页查询用户列表
      */
     @Override
-    public PageResult<UserVO> getUserList(int page, int pageSize, String keyword) {
+    public PageResult<UserVO> getUserList(int page, int pageSize, String keyword, String role) {
         Page<User> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
 
@@ -275,6 +275,10 @@ public class UserServiceImpl implements UserService {
                     .or()
                     .like(User::getNickname, keyword)
             );
+        }
+
+        if (StringUtils.hasText(role)) {
+            wrapper.eq(User::getRole, role);
         }
 
         wrapper.orderByDesc(User::getCreateTime);
