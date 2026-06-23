@@ -56,7 +56,8 @@ public class SkillTreeServiceImpl implements SkillTreeService {
         skill.setName(dto.getName());
         skill.setCategory(dto.getCategory());
         skill.setDescription(dto.getDescription());
-        skill.setStatus(dto.getStatus() != null ? dto.getStatus() : 1);
+        skill.setLevel(dto.getLevel() != null ? dto.getLevel() : 1);
+        skill.setParentId(dto.getParentId() != null ? dto.getParentId() : 0L);
 
         skillTreeMapper.insert(skill);
         log.info("新增技能成功: {}", dto.getName());
@@ -74,8 +75,11 @@ public class SkillTreeServiceImpl implements SkillTreeService {
         skill.setName(dto.getName());
         skill.setCategory(dto.getCategory());
         skill.setDescription(dto.getDescription());
-        if (dto.getStatus() != null) {
-            skill.setStatus(dto.getStatus());
+        if (dto.getLevel() != null) {
+            skill.setLevel(dto.getLevel());
+        }
+        if (dto.getParentId() != null) {
+            skill.setParentId(dto.getParentId());
         }
 
         skillTreeMapper.updateById(skill);
@@ -101,7 +105,8 @@ public class SkillTreeServiceImpl implements SkillTreeService {
         vo.setName(skill.getName());
         vo.setCategory(skill.getCategory());
         vo.setDescription(skill.getDescription());
-        vo.setStatus(skill.getStatus());
+        vo.setLevel(skill.getLevel());
+        vo.setParentId(skill.getParentId());
         vo.setCreateTime(skill.getCreateTime());
         return vo;
     }

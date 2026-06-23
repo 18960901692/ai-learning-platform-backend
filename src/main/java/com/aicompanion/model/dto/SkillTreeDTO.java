@@ -17,5 +17,7 @@ public class SkillTreeDTO {
 
     private String description;
 
-    private Integer status;
+    private Integer level;
+
+    private Long parentId;
 }

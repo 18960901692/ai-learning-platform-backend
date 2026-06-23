@@ -14,6 +14,7 @@ public class SkillTreeVO {
     private String name;
     private String category;
     private String description;
-    private Integer status;
+    private Integer level;
+    private Long parentId;
     private LocalDateTime createTime;
 }

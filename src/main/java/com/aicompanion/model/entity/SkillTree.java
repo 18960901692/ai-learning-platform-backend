@@ -1,15 +1,18 @@
 package com.aicompanion.model.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.time.LocalDateTime;
 
 /**
  * 技能树实体类
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("skill_tree")
+@TableName("skill")
 public class SkillTree extends BaseEntity {
 
     /**
@@ -18,7 +21,7 @@ public class SkillTree extends BaseEntity {
     private String name;
 
     /**
-     * 分类：FRONTEND/BACKEND/TOOL/BASIC
+     * 技能类别：前端开发/后端开发/数据库/运维部署
      */
     private String category;
 
@@ -28,7 +31,18 @@ public class SkillTree extends BaseEntity {
     private String description;
 
     /**
-     * 状态：0-禁用 1-启用
+     * 难度等级 1-5
      */
-    private Integer status;
+    private Integer level;
+
+    /**
+     * 父技能ID（0表示顶级）
+     */
+    private Long parentId;
+
+    /**
+     * skill 表没有 update_time 字段，排除父类的 updateTime
+     */
+    @TableField(exist = false)
+    private LocalDateTime updateTime;
 }
