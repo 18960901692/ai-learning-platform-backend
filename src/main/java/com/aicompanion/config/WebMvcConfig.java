@@ -38,7 +38,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(jwtInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                        "/auth/**",              // 认证接口放行
+                        "/auth/**",              // 用户认证接口放行
+                        "/admin/auth/**",         // 管理员认证接口放行
                         "/error",                // 错误页面
                         "/swagger-ui/**",        // Swagger UI 资源
                         "/swagger-ui.html",      // Swagger UI 入口页

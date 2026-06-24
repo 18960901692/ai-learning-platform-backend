@@ -53,7 +53,7 @@ public interface UserService {
     /**
      * 分页查询用户列表
      */
-    PageResult<UserVO> getUserList(int page, int pageSize, String keyword, String role);
+    PageResult<UserVO> getUserList(int page, int pageSize, String keyword);
 
     /**
      * 管理员新增用户

@@ -22,9 +22,4 @@ public class UpdateUserDTO {
     private String email;
 
     private String phone;
-
-    /**
-     * 角色：STUDENT / TEACHER / ADMIN
-     */
-    private String role;
 }

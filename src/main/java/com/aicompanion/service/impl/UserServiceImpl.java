@@ -64,7 +64,6 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setEmail(dto.getEmail());
         user.setNickname(dto.getUsername());
-        user.setRole("STUDENT");
         user.setStatus(1);
 
         // 4. 插入数据库
@@ -97,7 +96,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // 4. 生成访问 Token
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER");
 
         // 5. 处理"记住密码"
         String refreshToken = null;
@@ -149,7 +148,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // 4. 生成新的访问 Token
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER");
 
         // 5. 续期刷新令牌（滚动刷新）
         String newRefreshToken = jwtUtil.generateRandomRefreshToken();
@@ -202,12 +201,6 @@ public class UserServiceImpl implements UserService {
         if (dto.getAvatar() != null) {
             user.setAvatar(dto.getAvatar());
         }
-        if (dto.getProfession() != null) {
-            user.setProfession(dto.getProfession());
-        }
-        if (dto.getBio() != null) {
-            user.setBio(dto.getBio());
-        }
 
         userMapper.updateById(user);
         log.info("用户信息更新成功: userId={}", userId);
@@ -254,9 +247,6 @@ public class UserServiceImpl implements UserService {
         vo.setEmail(user.getEmail());
         vo.setPhone(user.getPhone());
         vo.setAvatar(user.getAvatar());
-        vo.setProfession(user.getProfession());
-        vo.setBio(user.getBio());
-        vo.setRole(user.getRole());
         vo.setStatus(user.getStatus());
         vo.setCreateTime(user.getCreateTime());
         return vo;
@@ -266,7 +256,7 @@ public class UserServiceImpl implements UserService {
      * 分页查询用户列表
      */
     @Override
-    public PageResult<UserVO> getUserList(int page, int pageSize, String keyword, String role) {
+    public PageResult<UserVO> getUserList(int page, int pageSize, String keyword) {
         Page<User> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
 
@@ -276,10 +266,6 @@ public class UserServiceImpl implements UserService {
                     .or()
                     .like(User::getNickname, keyword)
             );
-        }
-
-        if (StringUtils.hasText(role)) {
-            wrapper.eq(User::getRole, role);
         }
 
         wrapper.orderByDesc(User::getCreateTime);
@@ -321,7 +307,6 @@ public class UserServiceImpl implements UserService {
         user.setNickname(StringUtils.hasText(dto.getNickname()) ? dto.getNickname() : dto.getUsername());
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
-        user.setRole(StringUtils.hasText(dto.getRole()) ? dto.getRole() : "STUDENT");
         user.setStatus(1);
 
         // 4. 插入数据库
@@ -339,11 +324,6 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(404, "用户不存在");
-        }
-
-        // 禁止修改管理员角色
-        if ("ADMIN".equals(user.getRole()) && !"ADMIN".equals(dto.getRole())) {
-            throw new BusinessException(403, "禁止修改管理员角色");
         }
 
         // 检查用户名是否被其他用户占用
@@ -374,9 +354,6 @@ public class UserServiceImpl implements UserService {
         user.setNickname(StringUtils.hasText(dto.getNickname()) ? dto.getNickname() : dto.getUsername());
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
-        if (StringUtils.hasText(dto.getRole())) {
-            user.setRole(dto.getRole());
-        }
 
         userMapper.updateById(user);
         log.info("管理员修改用户成功: {}", dto.getUsername());
@@ -392,11 +369,6 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(404, "用户不存在");
-        }
-
-        // 禁止删除管理员
-        if ("ADMIN".equals(user.getRole())) {
-            throw new BusinessException(403, "禁止删除管理员");
         }
 
         userMapper.deleteById(userId);

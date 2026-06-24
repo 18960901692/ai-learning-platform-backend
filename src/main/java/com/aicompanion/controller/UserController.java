@@ -62,15 +62,13 @@ public class UserController {
     /**
      * 分页查询用户列表（管理员）
      */
-    @Operation(summary = "分页查询用户列表", description = "管理员分页查询所有用户，支持按用户名/昵称搜索和角色筛选")
+    @Operation(summary = "分页查询用户列表", description = "管理员分页查询所有用户，支持按用户名/昵称搜索")
     @GetMapping("/list")
     public Result<PageResult<UserVO>> getUserList(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String role) {
-        PageResult<UserVO> result = userService.getUserList(page, pageSize, keyword, role);
-        return Result.success(result);
+            @RequestParam(required = false) String keyword) {
+        return Result.success(userService.getUserList(page, pageSize, keyword));
     }
 
     /**

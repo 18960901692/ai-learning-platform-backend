@@ -9,12 +9,12 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 用户实体类（学生端）
+ * 管理员实体类
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("user")
-public class User extends BaseEntity {
+@TableName("admin")
+public class Admin extends BaseEntity {
 
     /**
      * 用户名
@@ -68,7 +68,7 @@ public class User extends BaseEntity {
     private Integer deleted;
 
     /**
-     * user 表没有 update_time 字段，排除父类的 updateTime
+     * admin 表没有 update_time 字段，排除父类的 updateTime
      */
     @TableField(exist = false)
     private LocalDateTime updateTime;

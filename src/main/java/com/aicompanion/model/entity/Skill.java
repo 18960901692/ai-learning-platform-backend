@@ -8,12 +8,12 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 技能树实体类
+ * 技能实体类
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("skill")
-public class SkillTree extends BaseEntity {
+public class Skill extends BaseEntity {
 
     /**
      * 技能名称

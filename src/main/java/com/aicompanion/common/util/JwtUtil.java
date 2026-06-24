@@ -37,14 +37,14 @@ public class JwtUtil {
     /**
      * 生成访问 Token
      */
-    public String generateToken(Long userId, String username, String role) {
+    public String generateToken(Long userId, String username, String userType) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("username", username)
-                .claim("role", role)
+                .claim("userType", userType)
                 .claim("type", "access")
                 .issuedAt(now)
                 .expiration(expiryDate)
@@ -95,11 +95,11 @@ public class JwtUtil {
     }
 
     /**
-     * 从 Token 中获取角色
+     * 从 Token 中获取用户类型（USER / ADMIN）
      */
-    public String getRole(String token) {
+    public String getUserType(String token) {
         Claims claims = parseToken(token);
-        return claims.get("role", String.class);
+        return claims.get("userType", String.class);
     }
 
     /**
@@ -127,5 +127,17 @@ public class JwtUtil {
      */
     public long getRefreshExpiration() {
         return refreshExpiration;
+    }
+
+    /**
+     * 从刷新 Token 中获取用户ID
+     */
+    public Long getUserIdFromRefreshToken(String token) {
+        Claims claims = parseToken(token);
+        String type = claims.get("type", String.class);
+        if (!"refresh".equals(type)) {
+            throw new RuntimeException("不是刷新令牌");
+        }
+        return Long.parseLong(claims.getSubject());
     }
 }

@@ -4,10 +4,10 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
- * 技能树创建/更新 DTO
+ * 技能创建/更新 DTO
  */
 @Data
-public class SkillTreeDTO {
+public class SkillDTO {
 
     @NotBlank(message = "技能名称不能为空")
     private String name;

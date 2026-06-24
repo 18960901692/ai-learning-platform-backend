@@ -1,6 +1,8 @@
 package com.aicompanion.common.util;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * 安全工具类
@@ -8,7 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 public class SecurityUtil {
 
     private static final String USER_ID_ATTR = "userId";
-    private static final String USER_ROLE_ATTR = "userRole";
+    private static final String USER_TYPE_ATTR = "userType";
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
@@ -24,19 +26,30 @@ public class SecurityUtil {
     }
 
     /**
-     * 从 Request 中获取当前用户角色
+     * 从当前线程上下文中获取用户ID（无需传入 request）
      */
-    public static String getCurrentUserRole(HttpServletRequest request) {
-        Object role = request.getAttribute(USER_ROLE_ATTR);
-        return role != null ? (String) role : "STUDENT";
+    public static Long getCurrentUserId() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs == null) {
+            throw new RuntimeException("无法获取当前请求上下文");
+        }
+        return getCurrentUserId(attrs.getRequest());
+    }
+
+    /**
+     * 从 Request 中获取当前用户类型（USER / ADMIN）
+     */
+    public static String getCurrentUserType(HttpServletRequest request) {
+        Object userType = request.getAttribute(USER_TYPE_ATTR);
+        return userType != null ? (String) userType : "USER";
     }
 
     /**
      * 将用户信息存入 Request
      */
-    public static void setCurrentUser(HttpServletRequest request, Long userId, String role) {
+    public static void setCurrentUser(HttpServletRequest request, Long userId, String userType) {
         request.setAttribute(USER_ID_ATTR, userId);
-        request.setAttribute(USER_ROLE_ATTR, role);
+        request.setAttribute(USER_TYPE_ATTR, userType);
     }
 
     /**
@@ -54,13 +67,6 @@ public class SecurityUtil {
      * 检查是否为管理员
      */
     public static boolean isAdmin(HttpServletRequest request) {
-        return "ADMIN".equals(getCurrentUserRole(request));
-    }
-
-    /**
-     * 检查是否为教师
-     */
-    public static boolean isTeacher(HttpServletRequest request) {
-        return "TEACHER".equals(getCurrentUserRole(request));
+        return "ADMIN".equals(getCurrentUserType(request));
     }
 }

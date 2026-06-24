@@ -17,8 +17,4 @@ public class UserDTO {
     private String phone;
 
     private String avatar;
-
-    private String profession;
-
-    private String bio;
 }
