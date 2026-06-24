@@ -7,7 +7,7 @@ import com.aicompanion.model.vo.SkillVO;
 import com.aicompanion.model.vo.UserSkillVO;
 import com.aicompanion.service.SkillService;
 import com.aicompanion.service.UserSkillService;
-import com.aicompanion.util.SecurityUtil;
+import com.aicompanion.common.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
