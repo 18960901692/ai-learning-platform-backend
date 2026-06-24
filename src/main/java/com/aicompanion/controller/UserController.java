@@ -6,7 +6,9 @@ import com.aicompanion.common.util.SecurityUtil;
 import com.aicompanion.model.dto.CreateUserDTO;
 import com.aicompanion.model.dto.UpdateUserDTO;
 import com.aicompanion.model.dto.UserDTO;
+import com.aicompanion.model.vo.LearningStatsVO;
 import com.aicompanion.model.vo.UserVO;
+import com.aicompanion.service.LearningRecordService;
 import com.aicompanion.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final LearningRecordService learningRecordService;
 
     /**
      * 获取当前登录用户信息
@@ -35,6 +38,17 @@ public class UserController {
         Long userId = SecurityUtil.getCurrentUserId(request);
         UserVO userVO = userService.getUserInfo(userId);
         return Result.success(userVO);
+    }
+
+    /**
+     * 获取当前用户学习统计
+     */
+    @Operation(summary = "获取用户学习统计", description = "获取当前用户的学习统计数据")
+    @GetMapping("/me/stats")
+    public Result<LearningStatsVO> getUserLearningStats(HttpServletRequest request) {
+        Long userId = SecurityUtil.getCurrentUserId(request);
+        LearningStatsVO stats = learningRecordService.getUserLearningStats(userId);
+        return Result.success("获取成功", stats);
     }
 
     /**
