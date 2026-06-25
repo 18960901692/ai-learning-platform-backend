@@ -28,10 +28,16 @@ public class LearningStatsVO {
      */
     private Integer activePlansCount;
 
+    /**
+     * 连续打卡天数
+     */
+    private Integer consecutiveDays;
+
     public LearningStatsVO() {
         this.totalStudySeconds = 0;
         this.studyingSkillsCount = 0;
         this.completedSkillsCount = 0;
         this.activePlansCount = 0;
+        this.consecutiveDays = 0;
     }
 }

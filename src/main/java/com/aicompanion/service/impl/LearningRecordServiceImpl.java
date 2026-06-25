@@ -26,6 +26,8 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         
         // 暂时设置为0，后续可以添加学习计划的统计
         stats.setActivePlansCount(0);
+        Integer consecutiveDays = learningRecordMapper.selectConsecutiveDays(userId);
+        stats.setConsecutiveDays(consecutiveDays != null ? consecutiveDays : 0);
 
         log.info("获取用户学习统计数据成功: userId={}, stats={}", userId, stats);
         return stats;
