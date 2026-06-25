@@ -47,7 +47,7 @@ public class UserServiceImpl implements UserService {
         wrapper.eq(User::getUsername, dto.getUsername());
         Long count = userMapper.selectCount(wrapper);
         if (count > 0) {
-            throw new BusinessException(400, "用户名已存在");
+            throw new BusinessException("用户名已存在");
         }
 
         // 2. 检查邮箱是否已存在
@@ -55,7 +55,7 @@ public class UserServiceImpl implements UserService {
         emailWrapper.eq(User::getEmail, dto.getEmail());
         Long emailCount = userMapper.selectCount(emailWrapper);
         if (emailCount > 0) {
-            throw new BusinessException(400, "邮箱已被注册");
+            throw new BusinessException("邮箱已被注册");
         }
 
         // 3. 构建用户并加密密码
@@ -64,6 +64,7 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setEmail(dto.getEmail());
         user.setNickname(dto.getUsername());
+        user.setRole("USER");
         user.setStatus(1);
 
         // 4. 插入数据库
@@ -90,7 +91,12 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(403, "账号已被禁用，请联系管理员");
         }
 
-        // 3. 校验密码
+        // 3. 校验角色（学生端只能 USER 角色登录）
+        if (!"USER".equals(user.getRole())) {
+            throw new BusinessException(403, "该账号为管理员账号，请使用管理后台登录");
+        }
+
+        // 4. 校验密码
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
             throw new BusinessException(401, "用户名或密码错误");
         }
@@ -247,6 +253,7 @@ public class UserServiceImpl implements UserService {
         vo.setEmail(user.getEmail());
         vo.setPhone(user.getPhone());
         vo.setAvatar(user.getAvatar());
+        vo.setRole(user.getRole());
         vo.setStatus(user.getStatus());
         vo.setCreateTime(user.getCreateTime());
         return vo;
@@ -373,5 +380,16 @@ public class UserServiceImpl implements UserService {
 
         userMapper.deleteById(userId);
         log.info("管理员删除用户成功: {}", user.getUsername());
+    }
+
+    /**
+     * 动态搜索用户（XML Mapper 实现）
+     */
+    @Override
+    public List<UserVO> searchUsers(String keyword, String role) {
+        List<User> users = userMapper.searchUsers(keyword, role);
+        return users.stream()
+                .map(this::toUserVO)
+                .toList();
     }
 }

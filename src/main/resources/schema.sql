@@ -4,7 +4,7 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ============================================================
--- 1. 用户表（学生端）
+-- 1. 用户表（统一表：学生 + 管理员，通过 role 字段区分）
 -- ============================================================
 DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
@@ -15,6 +15,7 @@ CREATE TABLE `user` (
   `email`                     VARCHAR(100) DEFAULT '' COMMENT '邮箱',
   `phone`                     VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
   `avatar`                    VARCHAR(500) DEFAULT '' COMMENT '头像URL',
+  `role`                      VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色: USER=学生, ADMIN=管理员',
   `status`                    TINYINT      NOT NULL DEFAULT 1 COMMENT '状态: 0=禁用, 1=正常',
   `refresh_token`             VARCHAR(64)  DEFAULT NULL COMMENT '刷新令牌',
   `refresh_token_expire_time` DATETIME     DEFAULT NULL COMMENT '刷新令牌过期时间',
@@ -22,33 +23,15 @@ CREATE TABLE `user` (
   `create_time`               DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE INDEX `uk_username` (`username`),
+  INDEX `idx_role` (`role`),
   INDEX `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表(学生)';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表(学生+管理员)';
 
--- ============================================================
--- 2. 管理员表
--- ============================================================
-DROP TABLE IF EXISTS `admin`;
-CREATE TABLE `admin` (
-  `id`                        BIGINT       NOT NULL AUTO_INCREMENT COMMENT '管理员ID',
-  `username`                  VARCHAR(50)  NOT NULL COMMENT '用户名(登录账号, 全局唯一)',
-  `password`                  VARCHAR(255) NOT NULL COMMENT '密码(BCrypt加密)',
-  `nickname`                  VARCHAR(50)  DEFAULT '' COMMENT '昵称',
-  `email`                     VARCHAR(100) DEFAULT '' COMMENT '邮箱',
-  `phone`                     VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
-  `avatar`                    VARCHAR(500) DEFAULT '' COMMENT '头像URL',
-  `status`                    TINYINT      NOT NULL DEFAULT 1 COMMENT '状态: 0=禁用, 1=正常',
-  `refresh_token`             VARCHAR(64)  DEFAULT NULL COMMENT '刷新令牌',
-  `refresh_token_expire_time` DATETIME     DEFAULT NULL COMMENT '刷新令牌过期时间',
-  `deleted`                   TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0=正常, 1=已删除',
-  `create_time`               DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `uk_username` (`username`),
-  INDEX `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理员表';
-
-INSERT INTO `admin` (`username`, `password`, `nickname`, `email`) VALUES
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 'admin@aicompanion.com');
+-- 默认管理员账号（密码: 123456）
+INSERT INTO `user` (`username`, `password`, `nickname`, `email`, `role`) VALUES
+('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 'admin@aicompanion.com', 'ADMIN'),
+('admin02', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '运营管理员', 'admin02@aicompanion.com', 'ADMIN'),
+('admin03', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '内容管理员', 'admin03@aicompanion.com', 'ADMIN');
 
 -- ============================================================
 -- 3. 技能树表（自关联树形结构）
@@ -265,12 +248,7 @@ INSERT INTO `user` (`username`, `password`, `nickname`, `email`, `phone`) VALUES
 ('wujiu', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '吴九', 'wujiu@test.com', '13800001007'),
 ('zhengshi', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '郑十', 'zhengshi@test.com', '13800001008');
 
--- 2. admin 表已有 1 条，再插入 2 条
-INSERT INTO `admin` (`username`, `password`, `nickname`, `email`) VALUES
-('admin02', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '运营管理员', 'admin02@aicompanion.com'),
-('admin03', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '内容管理员', 'admin03@aicompanion.com');
-
--- 3. skill 表补充数据（已有5条，再插入5条共10条）
+-- 2. skill 表补充数据（已有5条，再插入5条共10条）
 INSERT INTO `skill` (`name`, `category`, `description`, `level`, `parent_id`, `sort_order`) VALUES
 ('Spring Cloud', '后端开发', '微服务框架', 4, 1, 3),
 ('Redis', '数据库', '内存数据库/缓存', 3, 3, 2),

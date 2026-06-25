@@ -10,6 +10,8 @@ import com.aicompanion.model.dto.UserDTO;
 import com.aicompanion.model.vo.LoginVO;
 import com.aicompanion.model.vo.UserVO;
 
+import java.util.List;
+
 /**
  * 用户服务接口
  */
@@ -69,4 +71,9 @@ public interface UserService {
      * 管理员删除用户
      */
     void deleteUser(Long userId);
+
+    /**
+     * 动态搜索用户（支持角色筛选 + 关键词模糊搜索）
+     */
+    List<UserVO> searchUsers(String keyword, String role);
 }

@@ -47,6 +47,11 @@ public class User extends BaseEntity {
     private String avatar;
 
     /**
+     * 角色：USER=学生，ADMIN=管理员
+     */
+    private String role;
+
+    /**
      * 状态：0-禁用 1-正常
      */
     private Integer status;

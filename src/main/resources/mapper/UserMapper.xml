@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aicompanion.mapper.UserMapper">
+
+    <!-- 动态搜索用户 -->
+    <select id="searchUsers" resultType="com.aicompanion.model.entity.User">
+        SELECT *
+        FROM user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    username LIKE CONCAT('%', #{keyword}, '%')
+                    OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                    OR email LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="role != null and role != ''">
+                AND role = #{role}
+            </if>
+            AND deleted = 0
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

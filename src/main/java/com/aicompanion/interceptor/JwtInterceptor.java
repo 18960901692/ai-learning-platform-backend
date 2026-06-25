@@ -3,9 +3,7 @@ package com.aicompanion.interceptor;
 import com.aicompanion.common.response.Result;
 import com.aicompanion.common.util.JwtUtil;
 import com.aicompanion.common.util.SecurityUtil;
-import com.aicompanion.mapper.AdminMapper;
 import com.aicompanion.mapper.UserMapper;
-import com.aicompanion.model.entity.Admin;
 import com.aicompanion.model.entity.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,7 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * JWT 拦截器：校验 Token 有效性，支持 user/admin 双表认证
+ * JWT 拦截器：校验 Token 有效性，统一从 user 表认证，通过 role 区分权限
  */
 @Slf4j
 @Component
@@ -26,7 +24,6 @@ public class JwtInterceptor implements HandlerInterceptor {
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
     private final UserMapper userMapper;
-    private final AdminMapper adminMapper;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -46,19 +43,22 @@ public class JwtInterceptor implements HandlerInterceptor {
         Long userId = jwtUtil.getUserId(token);
         String userType = jwtUtil.getUserType(token);
 
-        // 根据 userType 验证用户是否存在且状态正常
-        if ("ADMIN".equals(userType)) {
-            Admin admin = adminMapper.selectById(userId);
-            if (admin == null || admin.getStatus() != 1) {
-                writeError(response, 401, "账号不存在或已被禁用");
-                return false;
-            }
-        } else {
-            User user = userMapper.selectById(userId);
-            if (user == null || user.getStatus() != 1) {
-                writeError(response, 401, "账号不存在或已被禁用");
-                return false;
-            }
+        // 统一从 user 表验证用户是否存在且状态正常
+        User user = userMapper.selectById(userId);
+        if (user == null || user.getStatus() != 1) {
+            writeError(response, 401, "账号不存在或已被禁用");
+            return false;
+        }
+
+        // 校验 role 与 userType 是否匹配（兼容老数据 role 为 NULL 的情况，默认视为 USER）
+        String userRole = user.getRole() != null ? user.getRole() : "USER";
+        if ("ADMIN".equals(userType) && !"ADMIN".equals(userRole)) {
+            writeError(response, 403, "该账号为学生账号，请使用学生端登录");
+            return false;
+        }
+        if ("USER".equals(userType) && !"USER".equals(userRole)) {
+            writeError(response, 403, "该账号为管理员账号，请使用管理后台登录");
+            return false;
         }
 
         SecurityUtil.setCurrentUser(request, userId, userType);

@@ -17,6 +17,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 用户控制器（获取/更新用户信息）
  */
@@ -52,28 +54,6 @@ public class UserController {
     }
 
     /**
-     * 根据 ID 获取用户信息
-     */
-    @Operation(summary = "根据ID获取用户信息", description = "根据用户ID获取用户详细信息")
-    @GetMapping("/{id}")
-    public Result<UserVO> getUserById(@PathVariable Long id) {
-        UserVO userVO = userService.getUserInfo(id);
-        return Result.success(userVO);
-    }
-
-    /**
-     * 更新用户信息
-     */
-    @Operation(summary = "更新用户信息", description = "更新当前用户的个人信息")
-    @PutMapping("/me")
-    public Result<UserVO> updateUser(@Valid @RequestBody UserDTO dto,
-                                     HttpServletRequest request) {
-        Long userId = SecurityUtil.getCurrentUserId(request);
-        UserVO userVO = userService.updateUser(userId, dto);
-        return Result.success("更新成功", userVO);
-    }
-
-    /**
      * 分页查询用户列表（管理员）
      */
     @Operation(summary = "分页查询用户列表", description = "管理员分页查询所有用户，支持按用户名/昵称搜索")
@@ -83,6 +63,27 @@ public class UserController {
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String keyword) {
         return Result.success(userService.getUserList(page, pageSize, keyword));
+    }
+
+    /**
+     * 动态搜索用户（XML Mapper 实现）
+     */
+    @Operation(summary = "动态搜索用户", description = "支持按角色筛选 + 关键词模糊搜索（用户名/昵称/邮箱）")
+    @GetMapping("/search")
+    public Result<List<UserVO>> searchUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String role) {
+        return Result.success(userService.searchUsers(keyword, role));
+    }
+
+    /**
+     * 根据 ID 获取用户信息
+     */
+    @Operation(summary = "根据ID获取用户信息", description = "根据用户ID获取用户详细信息")
+    @GetMapping("/{id}")
+    public Result<UserVO> getUserById(@PathVariable Long id) {
+        UserVO userVO = userService.getUserInfo(id);
+        return Result.success(userVO);
     }
 
     /**
