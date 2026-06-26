@@ -6,6 +6,7 @@ import com.aicompanion.common.util.SecurityUtil;
 import com.aicompanion.model.dto.CreateUserDTO;
 import com.aicompanion.model.dto.UpdateUserDTO;
 import com.aicompanion.model.dto.UserDTO;
+import com.aicompanion.model.vo.LearningRecordVO;
 import com.aicompanion.model.vo.LearningStatsVO;
 import com.aicompanion.model.vo.UserVO;
 import com.aicompanion.service.LearningRecordService;
@@ -51,6 +52,17 @@ public class UserController {
         Long userId = SecurityUtil.getCurrentUserId(request);
         LearningStatsVO stats = learningRecordService.getUserLearningStats(userId);
         return Result.success("获取成功", stats);
+    }
+
+    /**
+     * 获取当前用户学习记录列表
+     */
+    @Operation(summary = "获取用户学习记录列表", description = "获取当前用户的所有学习记录")
+    @GetMapping("/me/records")
+    public Result<List<LearningRecordVO>> getUserLearningRecords(HttpServletRequest request) {
+        Long userId = SecurityUtil.getCurrentUserId(request);
+        List<LearningRecordVO> records = learningRecordService.getUserLearningRecords(userId);
+        return Result.success("获取成功", records);
     }
 
     /**

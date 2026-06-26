@@ -130,6 +130,8 @@ CREATE TABLE `learning_record` (
   `last_study_time`  DATETIME     DEFAULT NULL COMMENT '最近学习时间',
   `complete_time`    DATETIME     DEFAULT NULL COMMENT '完成时间',
   `create_time`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted`          TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0=正常, 1=已删除',
   PRIMARY KEY (`id`),
   INDEX `idx_user_id` (`user_id`),
   INDEX `idx_skill_id` (`skill_id`),
@@ -347,3 +349,76 @@ INSERT INTO `interview_question` (`session_id`, `question_order`, `question`, `u
 (3, 3, 'React和Vue的主要区别是什么？', 'React是JSX+虚拟DOM，Vue是模板+响应式系统', '回答简洁到位', 75),
 (5, 1, 'Docker和虚拟机的区别是什么？', 'Docker是容器化，共享宿主机内核，更轻量', '回答正确', 80),
 (5, 2, '请简述Docker的镜像分层原理', '镜像由多层只读层组成，通过UnionFS合并', '回答准确', 85);
+
+-- ============================================================
+-- 13. 考核题库表
+-- ============================================================
+DROP TABLE IF EXISTS `exam_question`;
+CREATE TABLE `exam_question` (
+  `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '题目ID',
+  `skill_id`    BIGINT       NOT NULL COMMENT '技能ID（逻辑关联 skill.id）',
+  `type`        VARCHAR(20)  NOT NULL DEFAULT 'SINGLE' COMMENT '题型: SINGLE/MULTIPLE/JUDGE/SHORT_ANSWER',
+  `question`    TEXT         NOT NULL COMMENT '题目内容',
+  `options`     JSON         DEFAULT NULL COMMENT '选项JSON(选择题用)',
+  `answer`      TEXT         NOT NULL COMMENT '参考答案',
+  `score`       INT          DEFAULT 20 COMMENT '分值',
+  `difficulty`  TINYINT      DEFAULT 3 COMMENT '难度 1-5',
+  `source`      VARCHAR(20)  DEFAULT 'MANUAL' COMMENT '来源: MANUAL/AI_GENERATED',
+  `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  INDEX `idx_skill_id` (`skill_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核题库表';
+
+-- ============================================================
+-- 14. 考核会话表
+-- ============================================================
+DROP TABLE IF EXISTS `exam_session`;
+CREATE TABLE `exam_session` (
+  `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+  `user_id`          BIGINT       NOT NULL COMMENT '用户ID（逻辑关联 user.id）',
+  `skill_id`         BIGINT       NOT NULL COMMENT '技能ID',
+  `status`           VARCHAR(20)  NOT NULL DEFAULT 'IN_PROGRESS' COMMENT '状态: IN_PROGRESS/PASSED/FAILED',
+  `total_score`      INT          DEFAULT 0 COMMENT '总分',
+  `pass_score`       INT          NOT NULL DEFAULT 70 COMMENT '及格线(百分比)',
+  `total_questions`  INT          NOT NULL DEFAULT 5 COMMENT '总题数',
+  `answered_count`   INT          DEFAULT 0 COMMENT '已答数',
+  `ai_feedback`      TEXT         DEFAULT NULL COMMENT 'AI综合评价',
+  `start_time`       DATETIME     DEFAULT NULL COMMENT '开始时间',
+  `end_time`         DATETIME     DEFAULT NULL COMMENT '结束时间',
+  `create_time`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  INDEX `idx_user_skill` (`user_id`, `skill_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核会话表';
+
+-- ============================================================
+-- 15. 考核作答表
+-- ============================================================
+DROP TABLE IF EXISTS `exam_answer`;
+CREATE TABLE `exam_answer` (
+  `id`             BIGINT   NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+  `session_id`     BIGINT   NOT NULL COMMENT '会话ID',
+  `question_id`    BIGINT   NOT NULL COMMENT '题目ID',
+  `question_order` INT      NOT NULL COMMENT '题目序号',
+  `user_answer`    TEXT     DEFAULT NULL COMMENT '用户作答',
+  `score`          INT      DEFAULT NULL COMMENT '得分',
+  `ai_comment`     TEXT     DEFAULT NULL COMMENT 'AI点评',
+  `create_time`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  INDEX `idx_session_id` (`session_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核作答表';
+
+-- 考核题库初始数据（各技能预设几道题）
+INSERT INTO `exam_question` (`skill_id`, `type`, `question`, `options`, `answer`, `score`, `difficulty`, `source`) VALUES
+(1, 'SINGLE', 'Java中HashMap的底层数据结构是什么？', '[\"数组+链表\", \"数组+红黑树\", \"数组+链表+红黑树\", \"链表+红黑树\"]', '数组+链表+红黑树', 20, 2, 'MANUAL'),
+(1, 'SINGLE', 'Java中final关键字可以修饰什么？', '[\"类、方法、变量\", \"只有类和方法\", \"只有变量\", \"接口、类、方法\"]', '类、方法、变量', 20, 2, 'MANUAL'),
+(1, 'JUDGE', 'Java中的String是不可变类', NULL, '正确', 20, 1, 'MANUAL'),
+(1, 'SHORT_ANSWER', '请简述JDK8和JDK11的主要区别', NULL, 'JDK11是LTS版本，引入了HttpClient、ZGC等新特性', 20, 3, 'MANUAL'),
+(1, 'SINGLE', '以下哪个不是Java的访问修饰符？', '[\"public\", \"private\", \"protected\", \"internal\"]', 'internal', 20, 1, 'MANUAL'),
+(3, 'SINGLE', 'MySQL的默认存储引擎是什么？', '[\"MyISAM\", \"InnoDB\", \"Memory\", \"Archive\"]', 'InnoDB', 20, 1, 'MANUAL'),
+(3, 'SINGLE', 'B+树的叶子节点之间是什么连接方式？', '[\"双向链表\", \"单向链表\", \"数组\", \"树形\"]', '单向链表', 20, 2, 'MANUAL'),
+(3, 'JUDGE', 'MySQL中索引越多查询越快', NULL, '错误', 20, 2, 'MANUAL'),
+(4, 'SINGLE', 'Vue3使用什么API实现响应式？', '[\"Object.defineProperty\", \"Proxy\", \"Reflect\", \"发布订阅\"]', 'Proxy', 20, 2, 'MANUAL'),
+(4, 'SINGLE', 'Vue3的生命周期函数onMounted在什么时候调用？', '[\"组件创建时\", \"组件挂载后\", \"组件更新后\", \"组件销毁前\"]', '组件挂载后', 20, 1, 'MANUAL');
+
+SET FOREIGN_KEY_CHECKS = 1;
