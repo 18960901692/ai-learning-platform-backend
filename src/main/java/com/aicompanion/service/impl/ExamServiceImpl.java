@@ -220,6 +220,8 @@ public class ExamServiceImpl implements ExamService {
             lightUpSkill(userId, session.getSkillId(), score);
         } else {
             session.setStatus("FAILED");
+            // 考核失败也要更新 user_skill 为"学习中"状态
+            updateSkillToLearning(userId, session.getSkillId());
         }
 
         examSessionMapper.updateById(session);
@@ -325,6 +327,35 @@ public class ExamServiceImpl implements ExamService {
         }
 
         log.info("点亮技能: userId={}, skillId={}, level={}", userId, skillId, level);
+    }
+
+    /**
+     * 更新技能为"学习中"状态（考核失败时调用）
+     */
+    private void updateSkillToLearning(Long userId, Long skillId) {
+        UserSkill userSkill = userSkillMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserSkill>()
+                        .eq(UserSkill::getUserId, userId)
+                        .eq(UserSkill::getSkillId, skillId)
+                        .last("LIMIT 1")
+        );
+
+        if (userSkill == null) {
+            // 如果还没有记录，创建一条"学习中"的记录
+            userSkill = new UserSkill();
+            userSkill.setUserId(userId);
+            userSkill.setSkillId(skillId);
+            userSkill.setLevel(0);
+            userSkill.setStatus(1); // 学习中
+            userSkillMapper.insert(userSkill);
+        } else if (userSkill.getStatus() == 0) {
+            // 如果状态是"未开始"，更新为"学习中"
+            userSkill.setStatus(1);
+            userSkillMapper.updateById(userSkill);
+        }
+        // 如果已经是"已点亮"(status=2)，不降级
+
+        log.info("更新技能为学习中: userId={}, skillId={}", userId, skillId);
     }
 
     /**

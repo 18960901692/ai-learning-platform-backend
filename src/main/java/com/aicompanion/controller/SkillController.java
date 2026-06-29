@@ -76,10 +76,11 @@ public class SkillController {
         return Result.success(skillService.getAllCategories());
     }
 
-    @Operation(summary = "获取技能树", description = "获取树形结构的技能列表")
+    @Operation(summary = "获取技能树", description = "获取树形结构的技能列表（包含当前用户学习状态）")
     @GetMapping("/tree")
-    public Result<List<SkillVO>> getSkillTree() {
-        return Result.success(skillService.getSkillTree());
+    public Result<List<SkillVO>> getSkillTree(HttpServletRequest request) {
+        Long userId = SecurityUtil.getCurrentUserId(request);
+        return Result.success(skillService.getSkillTree(userId));
     }
 
     @Operation(summary = "获取用户技能掌握情况", description = "获取当前用户的技能掌握情况列表")

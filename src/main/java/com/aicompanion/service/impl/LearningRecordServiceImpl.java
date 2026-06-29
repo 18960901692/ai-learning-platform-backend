@@ -3,8 +3,10 @@ package com.aicompanion.service.impl;
 import com.aicompanion.common.exception.BusinessException;
 import com.aicompanion.mapper.LearningRecordMapper;
 import com.aicompanion.mapper.SkillMapper;
+import com.aicompanion.mapper.UserSkillMapper;
 import com.aicompanion.model.entity.LearningRecord;
 import com.aicompanion.model.entity.Skill;
+import com.aicompanion.model.entity.UserSkill;
 import com.aicompanion.model.vo.LearningRecordVO;
 import com.aicompanion.model.vo.LearningStatsVO;
 import com.aicompanion.service.LearningRecordService;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +30,7 @@ public class LearningRecordServiceImpl implements LearningRecordService {
 
     private final LearningRecordMapper learningRecordMapper;
     private final SkillMapper skillMapper;
+    private final UserSkillMapper userSkillMapper;
 
     @Override
     public LearningStatsVO getUserLearningStats(Long userId) {
@@ -145,5 +149,35 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         LearningRecordVO vo = new LearningRecordVO();
         BeanUtils.copyProperties(record, vo);
         return vo;
+    }
+
+    /**
+     * 更新 user_skill 状态为"学习中"
+     * 只要用户开始学习某个技能，就创建或更新 user_skill 记录为学习中状态
+     */
+    private void updateUserSkillToLearning(Long userId, Long skillId) {
+        UserSkill userSkill = userSkillMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserSkill>()
+                        .eq(UserSkill::getUserId, userId)
+                        .eq(UserSkill::getSkillId, skillId)
+                        .last("LIMIT 1")
+        );
+
+        if (userSkill == null) {
+            // 创建"学习中"记录
+            userSkill = new UserSkill();
+            userSkill.setUserId(userId);
+            userSkill.setSkillId(skillId);
+            userSkill.setLevel(0);
+            userSkill.setStatus(1); // 学习中
+            userSkillMapper.insert(userSkill);
+            log.info("创建学习中技能: userId={}, skillId={}", userId, skillId);
+        } else if (userSkill.getStatus() == 0) {
+            // 从"未开始"更新为"学习中"
+            userSkill.setStatus(1);
+            userSkillMapper.updateById(userSkill);
+            log.info("更新技能为学习中: userId={}, skillId={}", userId, skillId);
+        }
+        // 如果已经是"已点亮"(status=2)，不降级
     }
 }

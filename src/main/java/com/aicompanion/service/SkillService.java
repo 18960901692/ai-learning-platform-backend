@@ -47,7 +47,7 @@ public interface SkillService {
     List<String> getAllCategories();
 
     /**
-     * 获取技能树形结构
+     * 获取技能树形结构（包含用户学习状态）
      */
-    List<SkillVO> getSkillTree();
+    List<SkillVO> getSkillTree(Long userId);
 }

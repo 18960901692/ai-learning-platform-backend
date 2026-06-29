@@ -2,9 +2,14 @@ package com.aicompanion.service.impl;
 
 import com.aicompanion.common.exception.BusinessException;
 import com.aicompanion.common.response.PageResult;
+import com.aicompanion.common.util.SecurityUtil;
+import com.aicompanion.mapper.LearningRecordMapper;
 import com.aicompanion.mapper.SkillMapper;
+import com.aicompanion.mapper.UserSkillMapper;
 import com.aicompanion.model.dto.SkillDTO;
+import com.aicompanion.model.entity.LearningRecord;
 import com.aicompanion.model.entity.Skill;
+import com.aicompanion.model.entity.UserSkill;
 import com.aicompanion.model.vo.SkillVO;
 import com.aicompanion.service.SkillService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -15,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -27,6 +34,8 @@ import java.util.stream.Collectors;
 public class SkillServiceImpl implements SkillService {
 
     private final SkillMapper skillMapper;
+    private final LearningRecordMapper learningRecordMapper;
+    private final UserSkillMapper userSkillMapper;
 
     @Override
     public SkillVO createSkill(SkillDTO dto) {
@@ -136,13 +145,58 @@ public class SkillServiceImpl implements SkillService {
     }
 
     @Override
-    public List<SkillVO> getSkillTree() {
+    public List<SkillVO> getSkillTree(Long userId) {
         // 获取所有技能
         LambdaQueryWrapper<Skill> wrapper = new LambdaQueryWrapper<>();
         wrapper.orderByAsc(Skill::getLevel).orderByAsc(Skill::getCreateTime);
         List<SkillVO> allSkills = skillMapper.selectList(wrapper).stream()
                 .map(this::toSkillVO)
                 .collect(Collectors.toList());
+
+        // 获取用户的学习记录（按 skillId 分组）
+        LambdaQueryWrapper<LearningRecord> lrWrapper = new LambdaQueryWrapper<>();
+        lrWrapper.eq(LearningRecord::getUserId, userId)
+                .eq(LearningRecord::getDeleted, 0);
+        List<LearningRecord> learningRecords = learningRecordMapper.selectList(lrWrapper);
+        
+        // 建立 skillId -> learningRecord 的映射
+        Map<Long, LearningRecord> learningRecordMap = new HashMap<>();
+        for (LearningRecord record : learningRecords) {
+            // 如果有多个记录，取最新的一个
+            LearningRecord existing = learningRecordMap.get(record.getSkillId());
+            if (existing == null || record.getCreateTime().isAfter(existing.getCreateTime())) {
+                learningRecordMap.put(record.getSkillId(), record);
+            }
+        }
+
+        // 获取用户的技能掌握情况（已点亮）
+        LambdaQueryWrapper<UserSkill> usWrapper = new LambdaQueryWrapper<>();
+        usWrapper.eq(UserSkill::getUserId, userId);
+        List<UserSkill> userSkills = userSkillMapper.selectList(usWrapper);
+        
+        // 建立 skillId -> userSkill 的映射
+        Map<Long, UserSkill> userSkillMap = new HashMap<>();
+        for (UserSkill us : userSkills) {
+            userSkillMap.put(us.getSkillId(), us);
+        }
+
+        // 合并学习状态到技能 VO
+        for (SkillVO skill : allSkills) {
+            // 优先级: user_skill（已点亮） > learning_record（学习中/已完成）
+            UserSkill us = userSkillMap.get(skill.getId());
+            if (us != null && us.getStatus() == 2) {
+                // 已点亮（考核通过）
+                skill.setUserStatus(2);
+                skill.setUserLevel(us.getLevel());
+            } else {
+                // 从学习记录获取状态
+                LearningRecord record = learningRecordMap.get(skill.getId());
+                if (record != null) {
+                    skill.setUserStatus(record.getStatus());
+                    skill.setUserLevel(0);
+                }
+            }
+        }
 
         // 构建树形结构
         List<SkillVO> tree = new ArrayList<>();
