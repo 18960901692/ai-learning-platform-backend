@@ -16,6 +16,14 @@ spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
+  ai:
+    openai:
+      api-key: ${AI_API_KEY:sk-35290a1661da41b1ac5e6c2ae296cc39}
+      base-url: ${AI_BASE_URL:https://api.deepseek.com}
+      chat:
+        options:
+          model: ${AI_MODEL:deepseek-chat}
+          temperature: 0.7
 
 # 文件上传配置
 file:
