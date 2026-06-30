@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -37,12 +38,17 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     }
 
     @Override
-    public List<ChatSession> listSessions(Long userId) {
-        return chatSessionMapper.selectList(
-                new LambdaQueryWrapper<ChatSession>()
-                        .eq(ChatSession::getUserId, userId)
-                        .orderByDesc(ChatSession::getUpdateTime)
-        );
+    public List<ChatSession> listSessions(Long userId, String agentType) {
+        LambdaQueryWrapper<ChatSession> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ChatSession::getUserId, userId);
+
+        // 如果指定了 agentType，则筛选对应类型的会话
+        if (StringUtils.hasText(agentType)) {
+            wrapper.eq(ChatSession::getAgentType, agentType);
+        }
+
+        wrapper.orderByDesc(ChatSession::getUpdateTime);
+        return chatSessionMapper.selectList(wrapper);
     }
 
     @Override

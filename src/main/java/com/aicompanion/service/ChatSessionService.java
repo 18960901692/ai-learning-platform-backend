@@ -20,12 +20,13 @@ public interface ChatSessionService {
     Long createSession(Long userId, String title);
 
     /**
-     * 获取用户的会话列表（按更新时间倒序）
+     * 获取用户的会话列表（按更新时间倒序，支持按 agentType 筛选）
      *
-     * @param userId 用户ID
+     * @param userId    用户ID
+     * @param agentType Agent类型（可选）：CHAT/ASSESSMENT/PLANNING/INTERVIEW
      * @return 会话列表
      */
-    List<ChatSession> listSessions(Long userId);
+    List<ChatSession> listSessions(Long userId, String agentType);
 
     /**
      * 获取指定会话的消息历史

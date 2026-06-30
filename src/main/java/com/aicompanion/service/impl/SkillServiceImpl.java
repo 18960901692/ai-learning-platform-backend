@@ -169,10 +169,14 @@ public class SkillServiceImpl implements SkillService {
             }
         }
 
-        // 获取用户的技能掌握情况（已点亮）
+        // 获取用户的技能掌握情况
         LambdaQueryWrapper<UserSkill> usWrapper = new LambdaQueryWrapper<>();
         usWrapper.eq(UserSkill::getUserId, userId);
         List<UserSkill> userSkills = userSkillMapper.selectList(usWrapper);
+        log.info("getSkillTree: userId={}, 查询到 user_skill 记录数={}", userId, userSkills.size());
+        for (UserSkill us : userSkills) {
+            log.info("  user_skill: skillId={}, status={}, level={}", us.getSkillId(), us.getStatus(), us.getLevel());
+        }
         
         // 建立 skillId -> userSkill 的映射
         Map<Long, UserSkill> userSkillMap = new HashMap<>();
@@ -182,18 +186,21 @@ public class SkillServiceImpl implements SkillService {
 
         // 合并学习状态到技能 VO
         for (SkillVO skill : allSkills) {
-            // 优先级: user_skill（已点亮） > learning_record（学习中/已完成）
+            // 优先级: user_skill > learning_record
             UserSkill us = userSkillMap.get(skill.getId());
-            if (us != null && us.getStatus() == 2) {
-                // 已点亮（考核通过）
-                skill.setUserStatus(2);
+            if (us != null) {
+                skill.setUserStatus(us.getStatus());
                 skill.setUserLevel(us.getLevel());
+                log.debug("技能[{}]状态: userSkill status={}, level={}", skill.getName(), us.getStatus(), us.getLevel());
             } else {
-                // 从学习记录获取状态
+                // 从学习记录获取状态（仅当 user_skill 不存在时）
                 LearningRecord record = learningRecordMap.get(skill.getId());
                 if (record != null) {
                     skill.setUserStatus(record.getStatus());
                     skill.setUserLevel(0);
+                    log.debug("技能[{}]状态: learningRecord status={}", skill.getName(), record.getStatus());
+                } else {
+                    log.debug("技能[{}]状态: 无记录，默认 status=0, level=0", skill.getName());
                 }
             }
         }

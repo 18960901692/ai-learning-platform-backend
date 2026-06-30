@@ -264,6 +264,7 @@ public class AiChatServiceImpl implements AiChatService {
     /**
      * AI 面试官模式（临时覆盖系统提示词 + ChatMemory）
      * 只问 Java 基础问题、每次只问一题、根据回答追问
+     * 会话记录保存到数据库，agent_type=INTERVIEW
      */
     @Override
     public String interview(String sessionId, String message) {
@@ -272,6 +273,16 @@ public class AiChatServiceImpl implements AiChatService {
         // 面试会话使用独立的 conversationId，避免和普通聊天混淆
         String interviewSessionId = "interview-" + sessionId;
         ChatMemory memory = getOrCreateMemory(interviewSessionId);
+
+        // 获取当前用户ID
+        Long userId = getCurrentUserId();
+
+        // 确保 chat_session 记录存在（agent_type=INTERVIEW）
+        Long dbSessionId = parseSessionId(sessionId);
+        if (dbSessionId != null) {
+            ensureInterviewSessionExists(dbSessionId, userId, message);
+            saveUserMessage(dbSessionId, userId, message);
+        }
 
         // 使用 .system() 临时覆盖系统提示词 + .advisors() 自动管理上下文
         String reply = chatClient.prompt()
@@ -292,6 +303,31 @@ public class AiChatServiceImpl implements AiChatService {
                 .content();
 
         log.info("AI 面试官回复: sessionId={}, replyLength={}", sessionId, reply.length());
+
+        // 保存 AI 回复到数据库
+        if (dbSessionId != null) {
+            saveAssistantMessage(dbSessionId, userId, reply);
+        }
+
         return reply;
+    }
+
+    /**
+     * 确保面试会话记录存在（agent_type=INTERVIEW）
+     */
+    private void ensureInterviewSessionExists(Long sessionId, Long userId, String firstMessage) {
+        ChatSession session = chatSessionMapper.selectById(sessionId);
+        if (session == null) {
+            // 用第一条消息的前20字作为标题
+            String title = firstMessage != null && firstMessage.length() > 20
+                    ? firstMessage.substring(0, 20) : firstMessage;
+            session = new ChatSession();
+            session.setId(sessionId);
+            session.setUserId(userId);
+            session.setTitle(title != null && !title.isBlank() ? title : "面试对话");
+            session.setAgentType("INTERVIEW"); // 标记为面试会话
+            chatSessionMapper.insert(session);
+            log.info("创建面试会话: sessionId={}, userId={}, title={}", sessionId, userId, session.getTitle());
+        }
     }
 }

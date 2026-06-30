@@ -33,12 +33,12 @@ public class ChatSessionController {
     }
 
     /**
-     * 获取用户的历史会话列表
+     * 获取用户的历史会话列表（支持按 agentType 筛选）
      */
     @GetMapping("/list")
-    public Result<List<ChatSession>> listSessions() {
+    public Result<List<ChatSession>> listSessions(@RequestParam(required = false) String agentType) {
         Long userId = SecurityUtil.getCurrentUserId();
-        List<ChatSession> sessions = chatSessionService.listSessions(userId);
+        List<ChatSession> sessions = chatSessionService.listSessions(userId, agentType);
         return Result.success(sessions);
     }
 

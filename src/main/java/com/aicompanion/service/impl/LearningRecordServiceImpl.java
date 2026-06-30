@@ -105,6 +105,10 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         }
 
         log.info("开始学习技能: userId={}, skillId={}, recordId={}", userId, skillId, record.getId());
+        
+        // 同步更新 user_skill 状态为"学习中"
+        updateUserSkillToLearning(userId, skillId);
+        
         return record.getId();
     }
 
@@ -129,14 +133,15 @@ public class LearningRecordServiceImpl implements LearningRecordService {
             throw new BusinessException(404, "学习记录不存在");
         }
 
-        record.setStatus(2);
-        record.setCompleteTime(LocalDateTime.now());
+        // 保持 status=1（学习中），不改为 2，只有考核通过后才标记为已完成
+        // record.setStatus(2);  // 删除此行
         record.setProgress(100);
         
         // 取前端本地计时和后端心跳计时的最大值，确保不足30秒的学习也能被记录
         int dbSeconds = record.getStudySeconds() != null ? record.getStudySeconds() : 0;
         int finalSeconds = Math.max(dbSeconds, clientStudySeconds != null ? clientStudySeconds : 0);
         record.setStudySeconds(finalSeconds);
+        record.setLastStudyTime(LocalDateTime.now());
         
         learningRecordMapper.updateById(record);
 

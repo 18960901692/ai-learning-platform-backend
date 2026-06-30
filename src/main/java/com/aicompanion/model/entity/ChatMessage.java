@@ -3,6 +3,8 @@ package com.aicompanion.model.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 /**
@@ -13,20 +15,23 @@ import lombok.Data;
 public class ChatMessage {
 
     /**
-     * 消息ID
+     * 消息ID（序列化为 String，避免前端 JS 精度丢失）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     @TableField("id")
     private Long id;
 
     /**
-     * 会话ID（逻辑关联 chat_session.id）
+     * 会话ID（逻辑关联 chat_session.id，序列化为 String 避免前端 JS 精度丢失）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     @TableField("session_id")
     private Long sessionId;
 
     /**
-     * 用户ID（逻辑关联 user.id）
+     * 用户ID（逻辑关联 user.id，序列化为 String 避免前端 JS 精度丢失）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     @TableField("user_id")
     private Long userId;
 
