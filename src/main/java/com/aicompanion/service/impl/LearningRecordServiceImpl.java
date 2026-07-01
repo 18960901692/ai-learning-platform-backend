@@ -136,18 +136,44 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         // 保持 status=1（学习中），不改为 2，只有考核通过后才标记为已完成
         // record.setStatus(2);  // 删除此行
         record.setProgress(100);
-        
+
         // 取前端本地计时和后端心跳计时的最大值，确保不足30秒的学习也能被记录
         int dbSeconds = record.getStudySeconds() != null ? record.getStudySeconds() : 0;
         int finalSeconds = Math.max(dbSeconds, clientStudySeconds != null ? clientStudySeconds : 0);
         record.setStudySeconds(finalSeconds);
         record.setLastStudyTime(LocalDateTime.now());
-        
+
         learningRecordMapper.updateById(record);
 
-        log.info("结束学习: recordId={}, dbSeconds={}, clientSeconds={}, finalSeconds={}", 
+        // 根据最终学习时长更新 user_skill 的 level
+        updateUserSkillLevel(record.getUserId(), record.getSkillId(), finalSeconds);
+
+        log.info("结束学习: recordId={}, dbSeconds={}, clientSeconds={}, finalSeconds={}",
                 recordId, dbSeconds, clientStudySeconds, finalSeconds);
         return toVO(record);
+    }
+
+    /**
+     * 根据学习时长更新 user_skill 的 level（只升不降）
+     */
+    private void updateUserSkillLevel(Long userId, Long skillId, int studySeconds) {
+        int level = calculateLevelByStudySeconds(studySeconds);
+
+        UserSkill userSkill = userSkillMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserSkill>()
+                        .eq(UserSkill::getUserId, userId)
+                        .eq(UserSkill::getSkillId, skillId)
+                        .last("LIMIT 1")
+        );
+
+        if (userSkill != null && userSkill.getStatus() != 2) {
+            // 只升不降，已点亮的不降级
+            if (level > userSkill.getLevel()) {
+                userSkill.setLevel(level);
+                userSkillMapper.updateById(userSkill);
+                log.info("更新技能等级: userId={}, skillId={}, level={}, studySeconds={}", userId, skillId, level, studySeconds);
+            }
+        }
     }
 
     private LearningRecordVO toVO(LearningRecord record) {
@@ -157,10 +183,33 @@ public class LearningRecordServiceImpl implements LearningRecordService {
     }
 
     /**
+     * 根据学习时长计算掌握等级
+     */
+    private int calculateLevelByStudySeconds(int studySeconds) {
+        if (studySeconds < 60) return 0;       // < 1分钟: 未开始
+        if (studySeconds < 300) return 1;      // 1-5分钟: 入门
+        if (studySeconds < 900) return 2;      // 5-15分钟: 基础
+        if (studySeconds < 1800) return 3;     // 15-30分钟: 熟练
+        if (studySeconds < 3600) return 4;     // 30-60分钟: 精通
+        return 5;                               // > 60分钟: 专家
+    }
+
+    /**
      * 更新 user_skill 状态为"学习中"
      * 只要用户开始学习某个技能，就创建或更新 user_skill 记录为学习中状态
+     * 同时根据累计学习时长更新 level
      */
     private void updateUserSkillToLearning(Long userId, Long skillId) {
+        // 先获取当前学习时长
+        LearningRecord record = learningRecordMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<LearningRecord>()
+                        .eq(LearningRecord::getUserId, userId)
+                        .eq(LearningRecord::getSkillId, skillId)
+                        .last("LIMIT 1")
+        );
+        int studySeconds = record != null && record.getStudySeconds() != null ? record.getStudySeconds() : 0;
+        int level = calculateLevelByStudySeconds(studySeconds);
+
         UserSkill userSkill = userSkillMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserSkill>()
                         .eq(UserSkill::getUserId, userId)
@@ -173,15 +222,21 @@ public class LearningRecordServiceImpl implements LearningRecordService {
             userSkill = new UserSkill();
             userSkill.setUserId(userId);
             userSkill.setSkillId(skillId);
-            userSkill.setLevel(0);
+            userSkill.setLevel(level);
             userSkill.setStatus(1); // 学习中
             userSkillMapper.insert(userSkill);
-            log.info("创建学习中技能: userId={}, skillId={}", userId, skillId);
+            log.info("创建学习中技能: userId={}, skillId={}, level={}, studySeconds={}", userId, skillId, level, studySeconds);
         } else if (userSkill.getStatus() == 0) {
-            // 从"未开始"更新为"学习中"
+            // 从"未开始"更新为"学习中"，同时更新 level
             userSkill.setStatus(1);
+            userSkill.setLevel(Math.max(userSkill.getLevel(), level));
             userSkillMapper.updateById(userSkill);
-            log.info("更新技能为学习中: userId={}, skillId={}", userId, skillId);
+            log.info("更新技能为学习中: userId={}, skillId={}, level={}, studySeconds={}", userId, skillId, userSkill.getLevel(), studySeconds);
+        } else if (userSkill.getStatus() == 1) {
+            // 已经是"学习中"，根据最新学习时长更新 level（只升不降）
+            userSkill.setLevel(Math.max(userSkill.getLevel(), level));
+            userSkillMapper.updateById(userSkill);
+            log.info("更新技能等级: userId={}, skillId={}, level={}, studySeconds={}", userId, skillId, userSkill.getLevel(), studySeconds);
         }
         // 如果已经是"已点亮"(status=2)，不降级
     }

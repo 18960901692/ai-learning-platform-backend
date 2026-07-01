@@ -140,11 +140,23 @@ public class ExamServiceImpl implements ExamService {
     }
 
     /**
+     * 根据学习时长计算掌握等级
+     */
+    private int calculateLevelByStudySeconds(int studySeconds) {
+        if (studySeconds < 60) return 0;       // < 1分钟: 未开始
+        if (studySeconds < 300) return 1;      // 1-5分钟: 入门
+        if (studySeconds < 900) return 2;      // 5-15分钟: 基础
+        if (studySeconds < 1800) return 3;     // 15-30分钟: 熟练
+        if (studySeconds < 3600) return 4;     // 30-60分钟: 精通
+        return 5;                               // > 60分钟: 专家
+    }
+
+    /**
      * 点亮技能
      */
     private void lightUpSkill(Long userId, Long skillId, int score) {
         log.info("开始点亮技能: userId={}, skillId={}, score={}", userId, skillId, score);
-        
+
         UserSkill userSkill = userSkillMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserSkill>()
                         .eq(UserSkill::getUserId, userId)
@@ -152,7 +164,16 @@ public class ExamServiceImpl implements ExamService {
                         .last("LIMIT 1")
         );
 
-        int level = score >= 90 ? 3 : (score >= 80 ? 2 : 1);
+        // 根据学习时长计算等级
+        LearningRecord record = learningRecordMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<LearningRecord>()
+                        .eq(LearningRecord::getUserId, userId)
+                        .eq(LearningRecord::getSkillId, skillId)
+                        .last("LIMIT 1")
+        );
+        int studySeconds = record != null && record.getStudySeconds() != null ? record.getStudySeconds() : 0;
+        int level = calculateLevelByStudySeconds(studySeconds);
+        log.info("根据学习时长计算等级: studySeconds={}, level={}", studySeconds, level);
 
         if (userSkill == null) {
             log.info("创建新的user_skill记录: userId={}, skillId={}, level={}, status=2", userId, skillId, level);
@@ -170,23 +191,23 @@ public class ExamServiceImpl implements ExamService {
         }
 
         // 更新学习记录
-        LearningRecord record = learningRecordMapper.selectOne(
+        LearningRecord lr = learningRecordMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<LearningRecord>()
                         .eq(LearningRecord::getUserId, userId)
                         .eq(LearningRecord::getSkillId, skillId)
                         .eq(LearningRecord::getStatus, 1)
                         .last("LIMIT 1")
         );
-        if (record != null) {
-            log.info("更新learning_record: recordId={}, 原status={}, 新status=2", record.getId(), record.getStatus());
-            record.setStatus(2);
-            record.setProgress(100);
-            record.setCompleteTime(LocalDateTime.now());
+        if (lr != null) {
+            log.info("更新learning_record: recordId={}, 原status={}, 新status=2", lr.getId(), lr.getStatus());
+            lr.setStatus(2);
+            lr.setProgress(100);
+            lr.setCompleteTime(LocalDateTime.now());
             // 确保学习时长不为null
-            if (record.getStudySeconds() == null) {
-                record.setStudySeconds(0);
+            if (lr.getStudySeconds() == null) {
+                lr.setStudySeconds(0);
             }
-            learningRecordMapper.updateById(record);
+            learningRecordMapper.updateById(lr);
         } else {
             log.warn("未找到status=1的learning_record: userId={}, skillId={}", userId, skillId);
         }

@@ -34,7 +34,7 @@ INSERT INTO `user` (`username`, `password`, `nickname`, `email`, `role`) VALUES
 ('admin03', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '内容管理员', 'admin03@aicompanion.com', 'ADMIN');
 
 -- ============================================================
--- 3. 技能树表（自关联树形结构）
+-- 2. 技能树表（自关联树形结构）
 -- ============================================================
 DROP TABLE IF EXISTS `skill`;
 CREATE TABLE `skill` (
@@ -59,7 +59,7 @@ INSERT INTO `skill` (`name`, `category`, `description`, `level`, `parent_id`, `s
 ('Docker', '运维部署', '容器化技术', 3, 0, 1);
 
 -- ============================================================
--- 4. 用户技能关联表（多对多中间表）
+-- 3. 用户技能关联表（多对多中间表）
 -- ============================================================
 DROP TABLE IF EXISTS `user_skill`;
 CREATE TABLE `user_skill` (
@@ -77,7 +77,7 @@ CREATE TABLE `user_skill` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户技能关联表';
 
 -- ============================================================
--- 5. 学习计划表（AI 伴学核心：规划→执行→反馈闭环）
+-- 4. 学习计划表（AI 伴学核心：规划→执行→反馈闭环）
 -- ============================================================
 DROP TABLE IF EXISTS `learning_plan`;
 CREATE TABLE `learning_plan` (
@@ -97,7 +97,7 @@ CREATE TABLE `learning_plan` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习计划表';
 
 -- ============================================================
--- 6. 学习计划-技能关联表
+-- 5. 学习计划-技能关联表
 -- ============================================================
 DROP TABLE IF EXISTS `learning_plan_skill`;
 CREATE TABLE `learning_plan_skill` (
@@ -114,7 +114,7 @@ CREATE TABLE `learning_plan_skill` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习计划-技能关联表';
 
 -- ============================================================
--- 7. 学习记录表（反范式化设计：冗余 skill_name 减少 JOIN）
+-- 6. 学习记录表（反范式化设计：冗余 skill_name 减少 JOIN）
 -- ============================================================
 DROP TABLE IF EXISTS `learning_record`;
 CREATE TABLE `learning_record` (
@@ -139,7 +139,7 @@ CREATE TABLE `learning_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习记录表';
 
 -- ============================================================
--- 8. AI 对话会话表（ChatGPT 式多对话窗口）
+-- 7. AI 对话会话表（ChatGPT 式多对话窗口）
 -- ============================================================
 DROP TABLE IF EXISTS `chat_session`;
 CREATE TABLE `chat_session` (
@@ -156,7 +156,7 @@ CREATE TABLE `chat_session` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对话会话表';
 
 -- ============================================================
--- 9. AI 对话消息表
+-- 8. AI 对话消息表
 -- ============================================================
 DROP TABLE IF EXISTS `chat_message`;
 CREATE TABLE `chat_message` (
@@ -176,7 +176,7 @@ CREATE TABLE `chat_message` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对话消息表';
 
 -- ============================================================
--- 10.考核会话表
+-- 9. 考核会话表
 -- ============================================================
 DROP TABLE IF EXISTS `exam_session`;
 CREATE TABLE `exam_session` (
