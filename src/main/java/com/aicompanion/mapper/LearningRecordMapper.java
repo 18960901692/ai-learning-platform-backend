@@ -28,11 +28,17 @@ public interface LearningRecordMapper extends BaseMapper<LearningRecord> {
      * 查询用户连续打卡天数
      * 从最近一次学习记录开始，向前查找连续有学习记录的天数
      */
-    @Select("SELECT COUNT(DISTINCT DATE(create_time)) as consecutive_days " +
-            "FROM learning_record " +
-            "WHERE user_id = #{userId} AND deleted = 0 " +
-            "AND DATE(create_time) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) " +
-            "ORDER BY DATE(create_time) DESC")
+    @Select("SELECT COUNT(*) as consecutive_days " +
+            "FROM ( " +
+            "    SELECT @rn := @rn + 1 as rn, study_date " +
+            "    FROM ( " +
+            "        SELECT DISTINCT DATE(create_time) as study_date " +
+            "        FROM learning_record " +
+            "        WHERE user_id = #{userId} AND deleted = 0 " +
+            "        ORDER BY study_date DESC " +
+            "    ) dates, (SELECT @rn := 0) r " +
+            ") t " +
+            "WHERE study_date = DATE_SUB(CURDATE(), INTERVAL (rn - 1) DAY)")
     Integer selectConsecutiveDays(@Param("userId") Long userId);
 
     /**
