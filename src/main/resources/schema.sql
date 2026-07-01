@@ -193,6 +193,7 @@ CREATE TABLE `exam_session` (
   `end_time`         DATETIME     DEFAULT NULL COMMENT '结束时间',
   `create_time`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted`          TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0=未删除, 1=已删除',
   PRIMARY KEY (`id`),
   INDEX `idx_user_skill` (`user_id`, `skill_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核会话表';
@@ -210,6 +211,7 @@ CREATE TABLE `exam_answer` (
   `score`          INT      DEFAULT NULL COMMENT '得分',
   `ai_comment`     TEXT     DEFAULT NULL COMMENT 'AI点评',
   `create_time`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `deleted`        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0=未删除, 1=已删除',
   PRIMARY KEY (`id`),
   INDEX `idx_session_id` (`session_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核作答表';

@@ -29,7 +29,7 @@ public class ExamServiceImpl implements ExamService {
     private final UserSkillMapper userSkillMapper;
     private final LearningRecordMapper learningRecordMapper;
 
-    private static final int PASS_THRESHOLD = 70; // 70%
+    private static final int PASS_THRESHOLD = 60; // 60%
 
     @Override
     @Transactional
@@ -77,6 +77,8 @@ public class ExamServiceImpl implements ExamService {
     @Override
     @Transactional
     public ExamSessionVO saveDifyGrade(Long userId, Long sessionId, String text, int score, List<Long> questionIds, List<String> userAnswers) {
+        log.info("开始保存Dify阅卷结果: userId={}, sessionId={}, score={}, text长度={}", userId, sessionId, score, text != null ? text.length() : 0);
+        
         ExamSession session = examSessionMapper.selectById(sessionId);
         if (session == null) {
             throw new BusinessException(404, "考核会话不存在");
@@ -105,6 +107,9 @@ public class ExamServiceImpl implements ExamService {
         session.setAiFeedback(text);
         session.setAnsweredCount(session.getTotalQuestions());
         session.setEndTime(LocalDateTime.now());
+
+        log.info("准备更新exam_session: sessionId={}, score={}, aiFeedback长度={}, status将变为={}", 
+                sessionId, score, text != null ? text.length() : 0, score >= PASS_THRESHOLD ? "PASSED" : "FAILED");
 
         if (score >= PASS_THRESHOLD) {
             session.setStatus("PASSED");
@@ -166,6 +171,8 @@ public class ExamServiceImpl implements ExamService {
      * 点亮技能
      */
     private void lightUpSkill(Long userId, Long skillId, int score) {
+        log.info("开始点亮技能: userId={}, skillId={}, score={}", userId, skillId, score);
+        
         UserSkill userSkill = userSkillMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserSkill>()
                         .eq(UserSkill::getUserId, userId)
@@ -176,6 +183,7 @@ public class ExamServiceImpl implements ExamService {
         int level = score >= 90 ? 3 : (score >= 80 ? 2 : 1);
 
         if (userSkill == null) {
+            log.info("创建新的user_skill记录: userId={}, skillId={}, level={}, status=2", userId, skillId, level);
             userSkill = new UserSkill();
             userSkill.setUserId(userId);
             userSkill.setSkillId(skillId);
@@ -183,6 +191,7 @@ public class ExamServiceImpl implements ExamService {
             userSkill.setStatus(2);
             userSkillMapper.insert(userSkill);
         } else {
+            log.info("更新现有user_skill记录: userId={}, skillId={}, 原status={}, 新status=2", userId, skillId, userSkill.getStatus());
             userSkill.setLevel(Math.max(userSkill.getLevel(), level));
             userSkill.setStatus(2);
             userSkillMapper.updateById(userSkill);
@@ -197,6 +206,7 @@ public class ExamServiceImpl implements ExamService {
                         .last("LIMIT 1")
         );
         if (record != null) {
+            log.info("更新learning_record: recordId={}, 原status={}, 新status=2", record.getId(), record.getStatus());
             record.setStatus(2);
             record.setProgress(100);
             record.setCompleteTime(LocalDateTime.now());
@@ -205,9 +215,11 @@ public class ExamServiceImpl implements ExamService {
                 record.setStudySeconds(0);
             }
             learningRecordMapper.updateById(record);
+        } else {
+            log.warn("未找到status=1的learning_record: userId={}, skillId={}", userId, skillId);
         }
 
-        log.info("点亮技能: userId={}, skillId={}, level={}", userId, skillId, level);
+        log.info("点亮技能完成: userId={}, skillId={}, level={}", userId, skillId, level);
     }
 
     /**
