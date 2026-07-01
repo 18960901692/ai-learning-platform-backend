@@ -11,8 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 考核服务实现
@@ -24,7 +22,6 @@ import java.util.stream.Collectors;
 public class ExamServiceImpl implements ExamService {
 
     private final ExamSessionMapper examSessionMapper;
-    private final ExamAnswerMapper examAnswerMapper;
     private final SkillMapper skillMapper;
     private final UserSkillMapper userSkillMapper;
     private final LearningRecordMapper learningRecordMapper;
@@ -76,7 +73,7 @@ public class ExamServiceImpl implements ExamService {
 
     @Override
     @Transactional
-    public ExamSessionVO saveDifyGrade(Long userId, Long sessionId, String text, int score, List<Long> questionIds, List<String> userAnswers) {
+    public ExamSessionVO saveDifyGrade(Long userId, Long sessionId, String text, int score) {
         log.info("开始保存Dify阅卷结果: userId={}, sessionId={}, score={}, text长度={}", userId, sessionId, score, text != null ? text.length() : 0);
         
         ExamSession session = examSessionMapper.selectById(sessionId);
@@ -88,18 +85,6 @@ public class ExamServiceImpl implements ExamService {
         }
         if (!"IN_PROGRESS".equals(session.getStatus())) {
             throw new BusinessException("考核已结束，无法重复提交");
-        }
-
-        // 保存用户答案
-        if (questionIds != null && userAnswers != null && questionIds.size() == userAnswers.size()) {
-            for (int i = 0; i < questionIds.size(); i++) {
-                ExamAnswer answer = new ExamAnswer();
-                answer.setSessionId(sessionId);
-                answer.setQuestionId(questionIds.get(i));
-                answer.setQuestionOrder(i + 1);
-                answer.setUserAnswer(userAnswers.get(i));
-                examAnswerMapper.insert(answer);
-            }
         }
 
         // 保存 Dify 评分结果
@@ -135,7 +120,6 @@ public class ExamServiceImpl implements ExamService {
             throw new BusinessException(404, "考核会话不存在");
         }
 
-        List<ExamAnswer> answers = examAnswerMapper.findBySessionId(sessionId);
         Skill skill = skillMapper.selectById(session.getSkillId());
 
         ExamSessionVO vo = new ExamSessionVO();
@@ -152,18 +136,6 @@ public class ExamServiceImpl implements ExamService {
         vo.setStartTime(session.getStartTime());
         vo.setEndTime(session.getEndTime());
 
-        // 构建答案列表
-        List<ExamAnswerVO> answerVOs = answers.stream().map(a -> {
-            ExamAnswerVO avo = new ExamAnswerVO();
-            avo.setQuestionId(a.getQuestionId());
-            avo.setQuestionOrder(a.getQuestionOrder());
-            avo.setUserAnswer(a.getUserAnswer());
-            avo.setScore(a.getScore());
-            avo.setAiComment(a.getAiComment());
-            return avo;
-        }).collect(Collectors.toList());
-
-        vo.setAnswers(answerVOs);
         return vo;
     }
 

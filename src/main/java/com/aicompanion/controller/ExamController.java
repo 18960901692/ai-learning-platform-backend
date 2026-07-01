@@ -14,9 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Tag(name = "考核管理", description = "技能考核相关接口")
 @Slf4j
 @RestController
@@ -48,13 +45,7 @@ public class ExamController {
         log.info("收到保存Dify阅卷请求: userId={}, sessionId={}, score={}, text长度={}", 
                 userId, dto.getSessionId(), dto.getScore(), dto.getText() != null ? dto.getText().length() : 0);
         
-        List<Long> questionIds = null;
-        List<String> answers = null;
-        if (dto.getAnswers() != null) {
-            questionIds = dto.getAnswers().stream().map(DifyGradeDTO.SingleAnswerDTO::getQuestionId).collect(Collectors.toList());
-            answers = dto.getAnswers().stream().map(DifyGradeDTO.SingleAnswerDTO::getUserAnswer).collect(Collectors.toList());
-        }
-        ExamSessionVO result = examService.saveDifyGrade(userId, dto.getSessionId(), dto.getText(), dto.getScore(), questionIds, answers);
+        ExamSessionVO result = examService.saveDifyGrade(userId, dto.getSessionId(), dto.getText(), dto.getScore());
         return Result.success("评分已保存", result);
     }
 }

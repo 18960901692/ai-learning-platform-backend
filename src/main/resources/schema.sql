@@ -197,21 +197,3 @@ CREATE TABLE `exam_session` (
   PRIMARY KEY (`id`),
   INDEX `idx_user_skill` (`user_id`, `skill_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核会话表';
-
--- ============================================================
--- 11.考核作答表
--- ============================================================
-DROP TABLE IF EXISTS `exam_answer`;
-CREATE TABLE `exam_answer` (
-  `id`             BIGINT   NOT NULL AUTO_INCREMENT COMMENT '记录ID',
-  `session_id`     BIGINT   NOT NULL COMMENT '会话ID',
-  `question_id`    BIGINT   NOT NULL COMMENT '题目ID',
-  `question_order` INT      NOT NULL COMMENT '题目序号',
-  `user_answer`    TEXT     DEFAULT NULL COMMENT '用户作答',
-  `score`          INT      DEFAULT NULL COMMENT '得分',
-  `ai_comment`     TEXT     DEFAULT NULL COMMENT 'AI点评',
-  `create_time`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `deleted`        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0=未删除, 1=已删除',
-  PRIMARY KEY (`id`),
-  INDEX `idx_session_id` (`session_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核作答表';

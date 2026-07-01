@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 考核结果 VO
@@ -38,6 +37,4 @@ public class ExamSessionVO {
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;
-
-    private List<ExamAnswerVO> answers;
 }

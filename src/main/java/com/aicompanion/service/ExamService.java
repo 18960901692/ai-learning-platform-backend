@@ -3,8 +3,6 @@ package com.aicompanion.service;
 import com.aicompanion.model.vo.ExamSessionVO;
 import com.aicompanion.model.vo.StartExamVO;
 
-import java.util.List;
-
 /**
  * 考核服务接口
  * 注：题目生成和阅卷由 Dify 工作流完成，后端只负责会话管理和技能点亮
@@ -28,5 +26,5 @@ public interface ExamService {
      * 保存 Dify 阅卷结果
      * 鸿蒙端调用 Dify 阅卷后，将评分结果传给后端保存
      */
-    ExamSessionVO saveDifyGrade(Long userId, Long sessionId, String text, int score, List<Long> questionIds, List<String> userAnswers);
+    ExamSessionVO saveDifyGrade(Long userId, Long sessionId, String text, int score);
 }
