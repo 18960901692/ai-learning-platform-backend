@@ -7,25 +7,17 @@ import java.util.List;
 
 /**
  * 考核服务接口
+ * 注：题目生成和阅卷由 Dify 工作流完成，后端只负责会话管理和技能点亮
  */
 public interface ExamService {
 
     /**
      * 开始考核
      * 1. 校验父技能状态
-     * 2. 从题库/AI 获取 5 道题
-     * 3. 创建考核会话
-     * 4. 返回会话ID和题目（不含答案）
+     * 2. 创建考核会话
+     * 3. 返回会话ID（前端从 Dify 获取题目）
      */
     StartExamVO startExam(Long userId, Long skillId);
-
-    /**
-     * 提交答案并评分
-     * 用户答完所有题后一次性提交，调用 Dify 阅卷
-     * 计算总分，判断 PASSED/FAILED
-     * 通过则点亮技能
-     */
-    ExamSessionVO submitAndGrade(Long userId, Long sessionId, List<Long> questionIds, List<String> answers);
 
     /**
      * 获取考核结果

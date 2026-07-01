@@ -3,7 +3,7 @@ package com.aicompanion.controller;
 import com.aicompanion.common.response.Result;
 import com.aicompanion.common.util.SecurityUtil;
 import com.aicompanion.model.dto.DifyGradeDTO;
-import com.aicompanion.model.dto.SubmitAnswerDTO;
+import com.aicompanion.model.dto.StartExamDTO;
 import com.aicompanion.model.vo.ExamSessionVO;
 import com.aicompanion.model.vo.StartExamVO;
 import com.aicompanion.service.ExamService;
@@ -24,26 +24,12 @@ public class ExamController {
 
     private final ExamService examService;
 
-    @Operation(summary = "开始考核", description = "开始技能考核，返回会话ID和题目列表（不含答案）")
+    @Operation(summary = "开始考核", description = "开始技能考核，返回会话ID（前端从 Dify 获取题目）")
     @PostMapping("/start")
-    public Result<StartExamVO> startExam(@Valid @RequestBody com.aicompanion.model.dto.StartExamDTO dto) {
+    public Result<StartExamVO> startExam(@Valid @RequestBody StartExamDTO dto) {
         Long userId = SecurityUtil.getCurrentUserId();
         StartExamVO result = examService.startExam(userId, dto.getSkillId());
         return Result.success("开始考核", result);
-    }
-
-    @Operation(summary = "提交答案并评分", description = "用户答完所有题后一次性提交，系统自动评分并返回结果")
-    @PostMapping("/submit")
-    public Result<ExamSessionVO> submitAndGrade(@Valid @RequestBody SubmitAnswerDTO dto) {
-        Long userId = SecurityUtil.getCurrentUserId();
-        List<Long> questionIds = dto.getAnswers().stream()
-                .map(SubmitAnswerDTO.SingleAnswerDTO::getQuestionId)
-                .collect(Collectors.toList());
-        List<String> answers = dto.getAnswers().stream()
-                .map(SubmitAnswerDTO.SingleAnswerDTO::getUserAnswer)
-                .collect(Collectors.toList());
-        ExamSessionVO result = examService.submitAndGrade(userId, dto.getSessionId(), questionIds, answers);
-        return Result.success("考核完成", result);
     }
 
     @Operation(summary = "获取考核结果", description = "根据考核会话ID获取详细结果")
