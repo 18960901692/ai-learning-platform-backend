@@ -20,7 +20,7 @@ public interface AdminAuthService {
     LoginVO refreshToken(RefreshTokenDTO dto);
 
     /**
-     * 管理员登出
+     * 管理员登出（将 Token 加入黑名单）
      */
-    void logout(Long adminId);
+    void logout(Long adminId, String token);
 }

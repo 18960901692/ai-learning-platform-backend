@@ -3,6 +3,7 @@ package com.aicompanion.interceptor;
 import com.aicompanion.common.response.Result;
 import com.aicompanion.common.util.JwtUtil;
 import com.aicompanion.common.util.SecurityUtil;
+import com.aicompanion.common.util.TokenBlacklistService;
 import com.aicompanion.mapper.UserMapper;
 import com.aicompanion.model.entity.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +25,7 @@ public class JwtInterceptor implements HandlerInterceptor {
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
     private final UserMapper userMapper;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -50,6 +52,12 @@ public class JwtInterceptor implements HandlerInterceptor {
 
         if (token == null || token.isBlank()) {
             writeError(response, 401, "未登录，请先登录");
+            return false;
+        }
+
+        // 检查 Token 是否在黑名单中（已登出）
+        if (tokenBlacklistService.isBlacklisted(token)) {
+            writeError(response, 401, "Token 已失效，请重新登录");
             return false;
         }
 

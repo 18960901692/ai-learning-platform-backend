@@ -38,11 +38,13 @@ public class AdminAuthController {
         return Result.success(adminAuthService.refreshToken(dto));
     }
 
-    @Operation(summary = "管理员登出", description = "清除管理员的刷新令牌")
+    @Operation(summary = "管理员登出", description = "将当前 Token 加入黑名单并清除刷新令牌")
     @PostMapping("/logout")
-    public Result<Void> logout(@RequestAttribute(required = false) Long userId) {
+    public Result<Void> logout(@RequestAttribute(required = false) Long userId,
+                               jakarta.servlet.http.HttpServletRequest request) {
+        String token = com.aicompanion.common.util.SecurityUtil.extractToken(request);
         if (userId != null) {
-            adminAuthService.logout(userId);
+            adminAuthService.logout(userId, token);
         }
         return Result.success("登出成功", null);
     }

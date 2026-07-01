@@ -123,6 +123,14 @@ public class JwtUtil {
     }
 
     /**
+     * 获取 Token 过期时间戳（毫秒）
+     */
+    public long getExpiration(String token) {
+        Claims claims = parseToken(token);
+        return claims.getExpiration().getTime();
+    }
+
+    /**
      * 获取刷新令牌过期时间（毫秒）
      */
     public long getRefreshExpiration() {

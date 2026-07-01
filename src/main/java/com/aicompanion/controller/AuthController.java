@@ -55,16 +55,14 @@ public class AuthController {
 
     /**
      * 退出登录
-     * 注意：/auth/** 路径被拦截器排除，因此 userId 不会被自动注入
-     * 使用 required = false 避免 MissingRequestAttributeException
+     * 将当前 Token 加入黑名单，实现主动失效
      */
-    @Operation(summary = "退出登录", description = "清除刷新令牌，退出登录状态")
+    @Operation(summary = "退出登录", description = "将当前 Token 加入黑名单并清除刷新令牌，退出登录状态")
     @PostMapping("/logout")
-    public Result<Void> logout(@RequestAttribute(required = false) Long userId) {
-        if (userId == null) {
-            return Result.success("已退出登录", null);
-        }
-        userService.logout(userId);
+    public Result<Void> logout(@RequestAttribute(required = false) Long userId,
+                               jakarta.servlet.http.HttpServletRequest request) {
+        String token = com.aicompanion.common.util.SecurityUtil.extractToken(request);
+        userService.logout(userId, token);
         return Result.success("退出成功", null);
     }
 }

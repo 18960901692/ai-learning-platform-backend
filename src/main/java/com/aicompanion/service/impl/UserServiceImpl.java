@@ -3,6 +3,7 @@ package com.aicompanion.service.impl;
 import com.aicompanion.common.exception.BusinessException;
 import com.aicompanion.common.response.PageResult;
 import com.aicompanion.common.util.JwtUtil;
+import com.aicompanion.common.util.TokenBlacklistService;
 import com.aicompanion.mapper.UserMapper;
 import com.aicompanion.model.dto.CreateUserDTO;
 import com.aicompanion.model.dto.LoginDTO;
@@ -36,6 +37,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * 用户注册
@@ -214,16 +216,28 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * 退出登录（清除刷新令牌）
+     * 退出登录（将 Token 加入黑名单并清除刷新令牌）
      */
     @Override
-    public void logout(Long userId) {
-        User user = userMapper.selectById(userId);
-        if (user != null && user.getRefreshToken() != null) {
-            user.setRefreshToken(null);
-            user.setRefreshTokenExpireTime(null);
-            userMapper.updateById(user);
-            log.info("用户退出登录: userId={}", userId);
+    public void logout(Long userId, String token) {
+        // 1. 将当前 Token 加入黑名单，实现主动失效
+        if (token != null && !token.isBlank()) {
+            long remainingSeconds = tokenBlacklistService.getTokenRemainingSeconds(token);
+            if (remainingSeconds > 0) {
+                tokenBlacklistService.addToBlacklist(token, remainingSeconds);
+                log.info("Token 已加入黑名单，剩余有效期: {} 秒", remainingSeconds);
+            }
+        }
+
+        // 2. 清除刷新令牌
+        if (userId != null) {
+            User user = userMapper.selectById(userId);
+            if (user != null && user.getRefreshToken() != null) {
+                user.setRefreshToken(null);
+                user.setRefreshTokenExpireTime(null);
+                userMapper.updateById(user);
+                log.info("用户退出登录: userId={}", userId);
+            }
         }
     }
 

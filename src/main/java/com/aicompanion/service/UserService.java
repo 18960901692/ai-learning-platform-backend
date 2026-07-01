@@ -43,9 +43,9 @@ public interface UserService {
     UserVO updateUser(Long userId, UserDTO dto);
 
     /**
-     * 退出登录（清除刷新令牌）
+     * 退出登录（将 Token 加入黑名单并清除刷新令牌）
      */
-    void logout(Long userId);
+    void logout(Long userId, String token);
 
     /**
      * 更新用户头像

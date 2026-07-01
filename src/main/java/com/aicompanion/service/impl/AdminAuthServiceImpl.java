@@ -2,6 +2,7 @@ package com.aicompanion.service.impl;
 
 import com.aicompanion.common.exception.BusinessException;
 import com.aicompanion.common.util.JwtUtil;
+import com.aicompanion.common.util.TokenBlacklistService;
 import com.aicompanion.mapper.UserMapper;
 import com.aicompanion.model.dto.LoginDTO;
 import com.aicompanion.model.dto.RefreshTokenDTO;
@@ -28,6 +29,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     public LoginVO login(LoginDTO dto) {
@@ -141,7 +143,17 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     @Override
-    public void logout(Long adminId) {
+    public void logout(Long adminId, String token) {
+        // 1. 将当前 Token 加入黑名单，实现主动失效
+        if (token != null && !token.isBlank()) {
+            long remainingSeconds = tokenBlacklistService.getTokenRemainingSeconds(token);
+            if (remainingSeconds > 0) {
+                tokenBlacklistService.addToBlacklist(token, remainingSeconds);
+                log.info("管理员 Token 已加入黑名单，剩余有效期: {} 秒", remainingSeconds);
+            }
+        }
+
+        // 2. 清除刷新令牌
         User user = userMapper.selectById(adminId);
         if (user != null) {
             user.setRefreshToken(null);
