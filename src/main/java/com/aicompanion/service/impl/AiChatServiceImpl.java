@@ -335,4 +335,35 @@ public class AiChatServiceImpl implements AiChatService {
             log.info("创建面试会话: sessionId={}, userId={}, title={}", sessionId, userId, session.getTitle());
         }
     }
+
+    /**
+     * 生成知识点（用于技能学习页面）
+     * 每次调用都生成一个不同的知识点，不依赖会话记忆
+     */
+    @Override
+    public String generateKnowledgePoint(String skillName) {
+        log.info("生成知识点请求: skillName={}", skillName);
+
+        String reply = chatClient.prompt()
+                .system("""
+                        你是一位专业的编程知识导师。请根据用户指定的技能，生成一个核心知识点。
+                        规则：
+                        1. 每次只输出一个知识点，不要列出多个
+                        2. 知识点要实用、有深度，适合学习
+                        3. 输出格式：
+                           【知识点标题】
+                           简要说明（1-2句话）
+                           核心要点（3-5条，用数字编号）
+                           示例代码（如有必要，用代码块包裹）
+                           学习建议（1句话）
+                        4. 每次调用时生成不同的知识点，不要重复
+                        5. 知识点必须与用户指定的技能直接相关
+                        """)
+                .user("请为「" + skillName + "」这个技能生成一个相关的核心知识点")
+                .call()
+                .content();
+
+        log.info("知识点生成完成: skillName={}, replyLength={}", skillName, reply.length());
+        return reply;
+    }
 }

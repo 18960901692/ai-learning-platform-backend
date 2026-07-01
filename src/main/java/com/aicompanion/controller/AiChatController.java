@@ -2,6 +2,7 @@ package com.aicompanion.controller;
 
 import com.aicompanion.common.response.Result;
 import com.aicompanion.model.dto.AiChatRequestDTO;
+import com.aicompanion.model.dto.KnowledgePointRequestDTO;
 import com.aicompanion.service.AiChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,6 +48,16 @@ public class AiChatController {
     @PostMapping("/interview")
     public Result<String> interview(@Valid @RequestBody AiChatRequestDTO request) {
         String reply = aiChatService.interview(request.getSessionId(), request.getMessage());
+        return Result.success(reply);
+    }
+
+    /**
+     * 生成知识点（用于技能学习页面）
+     */
+    @Operation(summary = "生成知识点", description = "根据技能名称生成一个核心知识点")
+    @PostMapping("/knowledge-point")
+    public Result<String> generateKnowledgePoint(@Valid @RequestBody KnowledgePointRequestDTO request) {
+        String reply = aiChatService.generateKnowledgePoint(request.getSkillName());
         return Result.success(reply);
     }
 }

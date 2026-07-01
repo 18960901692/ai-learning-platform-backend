@@ -34,4 +34,13 @@ public interface AiChatService {
      * @return AI 回复内容
      */
     String interview(String sessionId, String message);
+
+    /**
+     * 生成知识点（用于技能学习页面）
+     * 根据技能名称生成一个核心知识点，包含知识点标题和详细内容
+     *
+     * @param skillName 技能名称
+     * @return 知识点内容
+     */
+    String generateKnowledgePoint(String skillName);
 }
