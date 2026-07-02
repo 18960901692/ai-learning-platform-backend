@@ -197,3 +197,20 @@ CREATE TABLE `exam_session` (
   PRIMARY KEY (`id`),
   INDEX `idx_user_skill` (`user_id`, `skill_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核会话表';
+
+-- ============================================================
+-- 10.ai 调用日志表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `ai_call_log` (
+  `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+  `user_id`       BIGINT       DEFAULT NULL COMMENT '用户ID（逻辑关联 user.id，可为空）',
+  `call_type`     VARCHAR(50)  NOT NULL COMMENT '调用类型: CHAT/CHAT_STREAM/INTERVIEW/KNOWLEDGE_POINT/LEARNING_PATH',
+  `duration_ms`   BIGINT       DEFAULT 0 COMMENT '耗时（毫秒）',
+  `success`       TINYINT(1)   NOT NULL DEFAULT 1 COMMENT '是否成功: 1=成功, 0=失败',
+  `error_message` TEXT         DEFAULT NULL COMMENT '错误信息（失败时）',
+  `create_time`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '调用时间',
+  PRIMARY KEY (`id`),
+  INDEX `idx_user_id` (`user_id`),
+  INDEX `idx_call_type` (`call_type`),
+  INDEX `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI调用日志表';
