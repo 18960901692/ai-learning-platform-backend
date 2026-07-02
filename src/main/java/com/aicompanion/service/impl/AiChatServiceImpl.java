@@ -6,6 +6,8 @@ import com.aicompanion.mapper.ChatSessionMapper;
 import com.aicompanion.model.entity.ChatMessage;
 import com.aicompanion.model.entity.ChatSession;
 import com.aicompanion.service.AiChatService;
+import com.aicompanion.tool.SkillLookupTool;
+import com.aicompanion.tool.UserSkillAnalysisTool;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,8 @@ public class AiChatServiceImpl implements AiChatService {
     private final ChatClient chatClient;
     private final ChatMessageMapper chatMessageMapper;
     private final ChatSessionMapper chatSessionMapper;
+    private final SkillLookupTool skillLookupTool;
+    private final UserSkillAnalysisTool userSkillAnalysisTool;
 
     /**
      * 每个 sessionId 对应一个独立的 ChatMemory
@@ -156,6 +160,10 @@ public class AiChatServiceImpl implements AiChatService {
         // 获取当前用户ID
         Long userId = getCurrentUserId();
 
+        // 设置用户ID到工具对象（ThreadLocal 无法跨 Reactor 线程传递）
+        skillLookupTool.setCurrentUserId(userId);
+        userSkillAnalysisTool.setCurrentUserId(userId);
+
         // 确保 chat_session 记录存在
         Long dbSessionId = parseSessionId(sessionId);
         if (dbSessionId != null) {
@@ -164,9 +172,11 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         // 使用 .advisors() + MessageChatMemoryAdvisor 自动加载历史对话，无需手动拼接
+        // 使用 .tools() 注册技能查询工具（仅对话功能使用）
         String reply = chatClient.prompt()
                 .user(message)
                 .advisors(MessageChatMemoryAdvisor.builder(memory).build())
+                .tools(skillLookupTool, userSkillAnalysisTool)
                 .call()
                 .content();
 
@@ -194,6 +204,10 @@ public class AiChatServiceImpl implements AiChatService {
         // 获取当前用户ID（在主线程获取，避免异步线程中 RequestContextHolder 失效）
         Long userId = getCurrentUserId();
 
+        // 设置用户ID到工具对象（ThreadLocal 无法跨 Reactor 线程传递）
+        skillLookupTool.setCurrentUserId(userId);
+        userSkillAnalysisTool.setCurrentUserId(userId);
+
         // 确保 chat_session 记录存在
         Long dbSessionId = parseSessionId(sessionId);
         if (dbSessionId != null) {
@@ -207,6 +221,7 @@ public class AiChatServiceImpl implements AiChatService {
                 chatClient.prompt()
                         .user(message)
                         .advisors(MessageChatMemoryAdvisor.builder(memory).build())
+                        .tools(skillLookupTool, userSkillAnalysisTool)
                         .stream()
                         .content()
                         .doOnNext(chunk -> {
