@@ -9,29 +9,29 @@ import com.aicompanion.service.AiChatService;
 import com.aicompanion.tool.LearningRecordTool;
 import com.aicompanion.tool.SkillLookupTool;
 import com.aicompanion.tool.UserSkillAnalysisTool;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * AI 对话服务实现类（基于 Spring AI ChatClient + ChatMemory 多轮对话）
+ * AI 对话服务实现类（基于 Spring AI ChatClient + Redis ChatMemory 多轮对话）
  *
- * <p>课后练习第 3 题：使用 Spring AI 原生的 ChatMemory 机制实现多轮对话，
- * 而非手动拼接字符串。通过 .advisors() 自动管理对话历史。</p>
+ * <p>手动管理 ChatMemory：发送前 get() 读取历史，回复后 add() 保存上下文。</p>
  */
 @Slf4j
 @Service
@@ -39,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AiChatServiceImpl implements AiChatService {
 
     private final ChatClient chatClient;
+    private final ChatMemory chatMemory;
     private final ChatMessageMapper chatMessageMapper;
     private final ChatSessionMapper chatSessionMapper;
     private final SkillLookupTool skillLookupTool;
@@ -46,42 +47,14 @@ public class AiChatServiceImpl implements AiChatService {
     private final LearningRecordTool learningRecordTool;
 
     /**
-     * 每个 sessionId 对应一个独立的 ChatMemory
+     * 获取当前登录用户ID（未登录时返回 null）
      */
-    private final Map<String, ChatMemory> sessionMemories = new ConcurrentHashMap<>();
-
-    /**
-     * 获取或创建指定 sessionId 的 ChatMemory
-     */
-    private ChatMemory getOrCreateMemory(String sessionId) {
-        return sessionMemories.computeIfAbsent(sessionId, id -> {
-            // 从数据库加载历史对话
-            List<ChatMessage> history = loadHistoryFromDb(sessionId);
-            ChatMemory memory = MessageWindowChatMemory.builder()
-                    .maxMessages(20)
-                    .build();
-            if (!history.isEmpty()) {
-                log.info("恢复历史对话记录: sessionId={}, recordCount={}", sessionId, history.size());
-            }
-            return memory;
-        });
-    }
-
-    /**
-     * 从数据库加载历史对话记录
-     */
-    private List<ChatMessage> loadHistoryFromDb(String sessionId) {
-        // 前端 sessionId 格式: session_123456，提取数字部分
-        Long dbSessionId = parseSessionId(sessionId);
-        if (dbSessionId == null) {
-            return List.of();
+    private Long getCurrentUserId() {
+        try {
+            return SecurityUtil.getCurrentUserId();
+        } catch (Exception e) {
+            return null;
         }
-        return chatMessageMapper.selectList(
-                new LambdaQueryWrapper<ChatMessage>()
-                        .eq(ChatMessage::getSessionId, dbSessionId)
-                        .orderByAsc(ChatMessage::getCreateTime)
-                        .last("LIMIT 20")
-        );
     }
 
     /**
@@ -97,23 +70,11 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     /**
-     * 获取当前登录用户ID（未登录时返回 null）
-     */
-    private Long getCurrentUserId() {
-        try {
-            return SecurityUtil.getCurrentUserId();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
      * 确保 chat_session 记录存在（首次对话时自动创建）
      */
     private void ensureSessionExists(Long sessionId, Long userId, String firstMessage) {
         ChatSession existing = chatSessionMapper.selectById(sessionId);
         if (existing == null) {
-            // 用第一条消息的前20字作为标题
             String title = firstMessage != null && firstMessage.length() > 20
                     ? firstMessage.substring(0, 20) : firstMessage;
             ChatSession session = new ChatSession();
@@ -151,18 +112,15 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     /**
-     * 同步对话（使用 ChatMemory 自动管理上下文）
+     * 同步对话（手动管理 Redis ChatMemory）
      */
     @Override
     public String chat(String sessionId, String message) {
         log.info("AI 对话请求: sessionId={}, message={}", sessionId, message);
 
-        ChatMemory memory = getOrCreateMemory(sessionId);
-
-        // 获取当前用户ID
         Long userId = getCurrentUserId();
 
-        // 设置用户ID到工具对象（ThreadLocal 无法跨 Reactor 线程传递）
+        // 设置用户ID到工具对象
         skillLookupTool.setCurrentUserId(userId);
         userSkillAnalysisTool.setCurrentUserId(userId);
         learningRecordTool.setCurrentUserId(userId);
@@ -174,18 +132,28 @@ public class AiChatServiceImpl implements AiChatService {
             saveUserMessage(dbSessionId, userId, message);
         }
 
-        // 使用 .advisors() + MessageChatMemoryAdvisor 自动加载历史对话，无需手动拼接
-        // 使用 .tools() 注册技能查询工具（仅对话功能使用）
-        String reply = chatClient.prompt()
-                .user(message)
-                .advisors(MessageChatMemoryAdvisor.builder(memory).build())
-                .tools(skillLookupTool, userSkillAnalysisTool, learningRecordTool)
+        // 1. 从 Redis 读取历史对话
+        List<Message> history = chatMemory.get(sessionId);
+        log.info("从 Redis 读取历史消息: sessionId={}, count={}", sessionId, history.size());
+
+        // 2. 构建消息列表：历史 + 当前用户消息
+        List<Message> messages = new ArrayList<>(history);
+        messages.add(new UserMessage(message));
+
+        // 3. 调用 AI
+        String reply = chatClient.prompt(new Prompt(messages))
                 .call()
                 .content();
 
+        // 4. 保存对话到 Redis（用户消息 + AI回复）
+        List<Message> toSave = new ArrayList<>();
+        toSave.add(new UserMessage(message));
+        toSave.add(new AssistantMessage(reply));
+        chatMemory.add(sessionId, toSave);
+
         log.info("AI 对话回复: sessionId={}, replyLength={}", sessionId, reply.length());
 
-        // 保存 AI 回复
+        // 5. 保存 AI 回复到数据库
         if (dbSessionId != null) {
             saveAssistantMessage(dbSessionId, userId, reply);
         }
@@ -193,21 +161,19 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     /**
-     * 流式对话（SSE + ChatMemory）
+     * 流式对话（SSE + 手动管理 Redis ChatMemory）
      */
     @Override
     public SseEmitter chatStream(String sessionId, String message) {
         log.info("AI 流式对话请求: sessionId={}, message={}", sessionId, message);
 
-        ChatMemory memory = getOrCreateMemory(sessionId);
-        SseEmitter emitter = new SseEmitter(120000L); // 超时 2 分钟
+        SseEmitter emitter = new SseEmitter(120000L);
         ObjectMapper mapper = new ObjectMapper();
         StringBuilder fullReply = new StringBuilder();
 
-        // 获取当前用户ID（在主线程获取，避免异步线程中 RequestContextHolder 失效）
         Long userId = getCurrentUserId();
 
-        // 设置用户ID到工具对象（ThreadLocal 无法跨 Reactor 线程传递）
+        // 设置用户ID到工具对象
         skillLookupTool.setCurrentUserId(userId);
         userSkillAnalysisTool.setCurrentUserId(userId);
         learningRecordTool.setCurrentUserId(userId);
@@ -219,19 +185,23 @@ public class AiChatServiceImpl implements AiChatService {
             saveUserMessage(dbSessionId, userId, message);
         }
 
-        // 异步执行流式调用，不阻塞主线程
+        // 从 Redis 读取历史对话
+        List<Message> history = chatMemory.get(sessionId);
+        log.info("从 Redis 读取历史消息: sessionId={}, count={}", sessionId, history.size());
+
+        // 构建消息列表：历史 + 当前用户消息
+        List<Message> messages = new ArrayList<>(history);
+        messages.add(new UserMessage(message));
+
+        // 异步执行流式调用
         CompletableFuture.runAsync(() -> {
             try {
-                chatClient.prompt()
-                        .user(message)
-                        .advisors(MessageChatMemoryAdvisor.builder(memory).build())
-                        .tools(skillLookupTool, userSkillAnalysisTool, learningRecordTool)
+                chatClient.prompt(new Prompt(messages))
                         .stream()
                         .content()
                         .doOnNext(chunk -> {
                             try {
                                 fullReply.append(chunk);
-                                // 发送 JSON 格式事件: { event: "message", data: "<chunk>" }
                                 Map<String, String> event = new LinkedHashMap<>();
                                 event.put("event", "message");
                                 event.put("data", chunk);
@@ -243,14 +213,18 @@ public class AiChatServiceImpl implements AiChatService {
                         })
                         .doOnComplete(() -> {
                             try {
-                                // 发送完成事件: { event: "done" }
                                 Map<String, String> doneEvent = new LinkedHashMap<>();
                                 doneEvent.put("event", "done");
                                 emitter.send(SseEmitter.event().data(mapper.writeValueAsString(doneEvent)));
                             } catch (IOException e) {
                                 log.error("SSE 发送完成事件失败", e);
                             }
-                            // 保存 AI 回复到数据库
+                            // 保存到 Redis
+                            List<Message> toSave = new ArrayList<>();
+                            toSave.add(new UserMessage(message));
+                            toSave.add(new AssistantMessage(fullReply.toString()));
+                            chatMemory.add(sessionId, toSave);
+
                             if (dbSessionId != null) {
                                 saveAssistantMessage(dbSessionId, userId, fullReply.toString());
                             }
@@ -259,7 +233,6 @@ public class AiChatServiceImpl implements AiChatService {
                         })
                         .doOnError(error -> {
                             try {
-                                // 发送错误事件: { event: "error", data: "<error>" }
                                 Map<String, String> errorEvent = new LinkedHashMap<>();
                                 errorEvent.put("event", "error");
                                 errorEvent.put("data", error.getMessage());
@@ -281,7 +254,7 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     /**
-     * AI 面试官模式（临时覆盖系统提示词 + ChatMemory）
+     * AI 面试官模式（临时覆盖系统提示词 + 手动管理 Redis ChatMemory）
      * 只问 Java 基础问题、每次只问一题、根据回答追问
      * 会话记录保存到数据库，agent_type=INTERVIEW
      */
@@ -291,9 +264,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         // 面试会话使用独立的 conversationId，避免和普通聊天混淆
         String interviewSessionId = "interview-" + sessionId;
-        ChatMemory memory = getOrCreateMemory(interviewSessionId);
 
-        // 获取当前用户ID
         Long userId = getCurrentUserId();
 
         // 确保 chat_session 记录存在（agent_type=INTERVIEW）
@@ -303,7 +274,15 @@ public class AiChatServiceImpl implements AiChatService {
             saveUserMessage(dbSessionId, userId, message);
         }
 
-        // 使用 .system() 临时覆盖系统提示词 + .advisors() 自动管理上下文
+        // 从 Redis 读取历史对话
+        List<Message> history = chatMemory.get(interviewSessionId);
+        log.info("从 Redis 读取面试历史消息: sessionId={}, count={}", interviewSessionId, history.size());
+
+        // 构建消息列表：历史 + 当前用户消息
+        List<Message> messages = new ArrayList<>(history);
+        messages.add(new UserMessage(message));
+
+        // 调用 AI
         String reply = chatClient.prompt()
                 .system("""
                         你是一位严格的 Java 技术面试官，正在对候选人进行面试。
@@ -321,18 +300,21 @@ public class AiChatServiceImpl implements AiChatService {
                         待提升项：知识盲区、表述问题、思路不足，并给出具体学习建议；
                         最终结论：给出评级以及是否推荐录用的意见。
                         """)
-                .user(message)
-                .advisors(MessageChatMemoryAdvisor.builder(memory).build())
+                .messages(messages)
                 .call()
                 .content();
 
+        // 保存到 Redis
+        List<Message> toSave = new ArrayList<>();
+        toSave.add(new UserMessage(message));
+        toSave.add(new AssistantMessage(reply));
+        chatMemory.add(interviewSessionId, toSave);
+
         log.info("AI 面试官回复: sessionId={}, replyLength={}", sessionId, reply.length());
 
-        // 保存 AI 回复到数据库
         if (dbSessionId != null) {
             saveAssistantMessage(dbSessionId, userId, reply);
         }
-
         return reply;
     }
 
@@ -342,14 +324,13 @@ public class AiChatServiceImpl implements AiChatService {
     private void ensureInterviewSessionExists(Long sessionId, Long userId, String firstMessage) {
         ChatSession session = chatSessionMapper.selectById(sessionId);
         if (session == null) {
-            // 用第一条消息的前20字作为标题
             String title = firstMessage != null && firstMessage.length() > 20
                     ? firstMessage.substring(0, 20) : firstMessage;
             session = new ChatSession();
             session.setId(sessionId);
             session.setUserId(userId);
             session.setTitle(title != null && !title.isBlank() ? title : "面试对话");
-            session.setAgentType("INTERVIEW"); // 标记为面试会话
+            session.setAgentType("INTERVIEW");
             chatSessionMapper.insert(session);
             log.info("创建面试会话: sessionId={}, userId={}, title={}", sessionId, userId, session.getTitle());
         }
