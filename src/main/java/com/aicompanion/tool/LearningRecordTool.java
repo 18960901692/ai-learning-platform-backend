@@ -3,6 +3,7 @@ package com.aicompanion.tool;
 import com.aicompanion.mapper.LearningRecordMapper;
 import com.aicompanion.model.entity.LearningRecord;
 import com.aicompanion.model.vo.LearningRecordInfo;
+import com.aicompanion.service.CheckInService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import java.util.List;
 public class LearningRecordTool {
 
     private final LearningRecordMapper learningRecordMapper;
+    private final CheckInService checkInService;
 
     /**
      * 当前请求的用户ID（由 AiChatServiceImpl 在每次调用前设置）
@@ -80,13 +82,13 @@ public class LearningRecordTool {
         }
 
         // 查询连续打卡天数
-        Integer consecutiveDays = learningRecordMapper.selectConsecutiveDays(userId);
+        int consecutiveDays = checkInService.getConsecutiveDays(userId);
 
         return new LearningRecordInfo(
                 totalStudySeconds,
                 studyingCount,
                 completedCount,
-                consecutiveDays != null ? consecutiveDays : 0,
+                consecutiveDays,
                 details
         );
     }

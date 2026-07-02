@@ -9,6 +9,7 @@ import com.aicompanion.model.entity.Skill;
 import com.aicompanion.model.entity.UserSkill;
 import com.aicompanion.model.vo.LearningRecordVO;
 import com.aicompanion.model.vo.LearningStatsVO;
+import com.aicompanion.service.CheckInService;
 import com.aicompanion.service.LearningRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class LearningRecordServiceImpl implements LearningRecordService {
     private final LearningRecordMapper learningRecordMapper;
     private final SkillMapper skillMapper;
     private final UserSkillMapper userSkillMapper;
+    private final CheckInService checkInService;
 
     @Override
     public LearningStatsVO getUserLearningStats(Long userId) {
@@ -40,8 +42,8 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         }
 
         stats.setActivePlansCount(0);
-        Integer consecutiveDays = learningRecordMapper.selectConsecutiveDays(userId);
-        stats.setConsecutiveDays(consecutiveDays != null ? consecutiveDays : 0);
+        int consecutiveDays = checkInService.getConsecutiveDays(userId);
+        stats.setConsecutiveDays(consecutiveDays);
 
         log.info("获取用户学习统计数据成功: userId={}, stats={}", userId, stats);
         return stats;
@@ -61,6 +63,9 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         if (skill == null) {
             throw new BusinessException(404, "技能不存在");
         }
+
+        // 开始学习即标记今日打卡（放在所有 return 之前，确保所有路径都打卡）
+        checkInService.checkIn(userId);
 
         // 查找是否有进行中的学习记录
         LearningRecord record = learningRecordMapper.selectOne(
@@ -123,6 +128,7 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         record.setStudySeconds(newSeconds);
         record.setLastStudyTime(LocalDateTime.now());
         learningRecordMapper.updateById(record);
+        checkInService.checkIn(record.getUserId());
         log.debug("学习心跳: recordId={}, totalSeconds={}", recordId, newSeconds);
     }
 

@@ -27,12 +27,13 @@ public interface LearningRecordMapper extends BaseMapper<LearningRecord> {
     /**
      * 查询用户连续打卡天数
      * 从最近一次学习记录开始，向前查找连续有学习记录的天数
+     * 使用 last_study_time 而非 create_time，因为同技能学习多天时 create_time 不会更新
      */
     @Select("SELECT COUNT(*) as consecutive_days " +
             "FROM ( " +
             "    SELECT @rn := @rn + 1 as rn, study_date " +
             "    FROM ( " +
-            "        SELECT DISTINCT DATE(create_time) as study_date " +
+            "        SELECT DISTINCT DATE(last_study_time) as study_date " +
             "        FROM learning_record " +
             "        WHERE user_id = #{userId} AND deleted = 0 " +
             "        ORDER BY study_date DESC " +
