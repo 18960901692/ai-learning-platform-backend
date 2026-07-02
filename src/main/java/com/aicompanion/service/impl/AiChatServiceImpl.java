@@ -6,6 +6,7 @@ import com.aicompanion.mapper.ChatSessionMapper;
 import com.aicompanion.model.entity.ChatMessage;
 import com.aicompanion.model.entity.ChatSession;
 import com.aicompanion.service.AiChatService;
+import com.aicompanion.tool.LearningRecordTool;
 import com.aicompanion.tool.SkillLookupTool;
 import com.aicompanion.tool.UserSkillAnalysisTool;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -42,6 +43,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final ChatSessionMapper chatSessionMapper;
     private final SkillLookupTool skillLookupTool;
     private final UserSkillAnalysisTool userSkillAnalysisTool;
+    private final LearningRecordTool learningRecordTool;
 
     /**
      * 每个 sessionId 对应一个独立的 ChatMemory
@@ -163,6 +165,7 @@ public class AiChatServiceImpl implements AiChatService {
         // 设置用户ID到工具对象（ThreadLocal 无法跨 Reactor 线程传递）
         skillLookupTool.setCurrentUserId(userId);
         userSkillAnalysisTool.setCurrentUserId(userId);
+        learningRecordTool.setCurrentUserId(userId);
 
         // 确保 chat_session 记录存在
         Long dbSessionId = parseSessionId(sessionId);
@@ -176,7 +179,7 @@ public class AiChatServiceImpl implements AiChatService {
         String reply = chatClient.prompt()
                 .user(message)
                 .advisors(MessageChatMemoryAdvisor.builder(memory).build())
-                .tools(skillLookupTool, userSkillAnalysisTool)
+                .tools(skillLookupTool, userSkillAnalysisTool, learningRecordTool)
                 .call()
                 .content();
 
@@ -207,6 +210,7 @@ public class AiChatServiceImpl implements AiChatService {
         // 设置用户ID到工具对象（ThreadLocal 无法跨 Reactor 线程传递）
         skillLookupTool.setCurrentUserId(userId);
         userSkillAnalysisTool.setCurrentUserId(userId);
+        learningRecordTool.setCurrentUserId(userId);
 
         // 确保 chat_session 记录存在
         Long dbSessionId = parseSessionId(sessionId);
@@ -221,7 +225,7 @@ public class AiChatServiceImpl implements AiChatService {
                 chatClient.prompt()
                         .user(message)
                         .advisors(MessageChatMemoryAdvisor.builder(memory).build())
-                        .tools(skillLookupTool, userSkillAnalysisTool)
+                        .tools(skillLookupTool, userSkillAnalysisTool, learningRecordTool)
                         .stream()
                         .content()
                         .doOnNext(chunk -> {
