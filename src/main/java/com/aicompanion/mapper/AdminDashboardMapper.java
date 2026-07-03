@@ -46,22 +46,30 @@ public interface AdminDashboardMapper {
     List<Map<String, Object>> userGrowthTrend(int days);
 
     /**
-     * 最近活跃学习用户 Top 5
+     * 最近活跃学习用户 Top 5（每个用户只显示最近一条学习记录）
      */
     @Select("SELECT u.id, u.username, u.nickname, u.avatar, " +
-            "s.name AS skill_name, lr.last_study_time " +
-            "FROM learning_record lr " +
-            "JOIN user u ON lr.user_id = u.id " +
-            "JOIN skill s ON lr.skill_id = s.id " +
-            "WHERE lr.deleted = 0 AND u.deleted = 0 " +
-            "ORDER BY lr.last_study_time DESC LIMIT 5")
+            "(SELECT s.name FROM learning_record lr2 " +
+            " JOIN skill s ON lr2.skill_id = s.id " +
+            " WHERE lr2.user_id = u.id AND lr2.deleted = 0 " +
+            " ORDER BY lr2.last_study_time DESC LIMIT 1) AS skill_name, " +
+            "DATE_FORMAT(" +
+            "  (SELECT MAX(lr3.last_study_time) FROM learning_record lr3 " +
+            "   WHERE lr3.user_id = u.id AND lr3.deleted = 0), " +
+            "  '%Y-%m-%d %H:%i:%s' " +
+            ") AS last_study_time " +
+            "FROM user u " +
+            "WHERE u.deleted = 0 " +
+            "AND EXISTS (SELECT 1 FROM learning_record lr4 WHERE lr4.user_id = u.id AND lr4.deleted = 0) " +
+            "ORDER BY last_study_time DESC LIMIT 5")
     List<Map<String, Object>> recentLearners();
 
     /**
      * 最近考核情况 Top 5
      */
     @Select("SELECT es.id, u.username, u.nickname, s.name AS skill_name, " +
-            "es.total_score, es.pass_score, es.status, es.start_time " +
+            "es.total_score, es.pass_score, es.status, " +
+            "DATE_FORMAT(es.start_time, '%Y-%m-%d %H:%i:%s') AS start_time " +
             "FROM exam_session es " +
             "JOIN user u ON es.user_id = u.id " +
             "JOIN skill s ON es.skill_id = s.id " +
