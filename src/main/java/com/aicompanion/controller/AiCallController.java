@@ -17,7 +17,7 @@ import java.util.Map;
  */
 @Tag(name = "AI调用统计", description = "管理员查看 AI 调用次数统计")
 @RestController
-@RequestMapping("/ai-call")
+@RequestMapping("/admin/ai-call")
 @RequiredArgsConstructor
 public class AiCallController {
 
