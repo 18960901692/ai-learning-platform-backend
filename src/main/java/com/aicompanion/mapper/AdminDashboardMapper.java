@@ -48,11 +48,20 @@ public interface AdminDashboardMapper {
     /**
      * 最近活跃学习用户 Top 5（每个用户只显示最近一条学习记录）
      */
-    @Select("SELECT u.id, u.username, u.nickname, u.avatar, " +
+    @Select("SELECT u.id, u.username, u.nickname, " +
             "(SELECT s.name FROM learning_record lr2 " +
             " JOIN skill s ON lr2.skill_id = s.id " +
             " WHERE lr2.user_id = u.id AND lr2.deleted = 0 " +
             " ORDER BY lr2.last_study_time DESC LIMIT 1) AS skill_name, " +
+            "(SELECT lr2.progress FROM learning_record lr2 " +
+            " WHERE lr2.user_id = u.id AND lr2.deleted = 0 " +
+            " ORDER BY lr2.last_study_time DESC LIMIT 1) AS progress, " +
+            "(SELECT lr2.study_seconds FROM learning_record lr2 " +
+            " WHERE lr2.user_id = u.id AND lr2.deleted = 0 " +
+            " ORDER BY lr2.last_study_time DESC LIMIT 1) AS study_seconds, " +
+            "(SELECT lr2.status FROM learning_record lr2 " +
+            " WHERE lr2.user_id = u.id AND lr2.deleted = 0 " +
+            " ORDER BY lr2.last_study_time DESC LIMIT 1) AS status, " +
             "DATE_FORMAT(" +
             "  (SELECT MAX(lr3.last_study_time) FROM learning_record lr3 " +
             "   WHERE lr3.user_id = u.id AND lr3.deleted = 0), " +
