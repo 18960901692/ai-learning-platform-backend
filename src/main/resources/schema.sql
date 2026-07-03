@@ -1,5 +1,3 @@
-d:\CodeBase\ai-learning-platform\database\ai_companion.sql
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -15,6 +13,8 @@ CREATE TABLE `user` (
   `email`                     VARCHAR(100) DEFAULT '' COMMENT '邮箱',
   `phone`                     VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
   `avatar`                    VARCHAR(500) DEFAULT '' COMMENT '头像URL',
+  `profession`                VARCHAR(100) DEFAULT NULL COMMENT '职业',
+  `bio`                       VARCHAR(500) DEFAULT NULL COMMENT '个人简介',
   `role`                      VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色: USER=学生, ADMIN=管理员',
   `status`                    TINYINT      NOT NULL DEFAULT 1 COMMENT '状态: 0=禁用, 1=正常',
   `refresh_token`             VARCHAR(64)  DEFAULT NULL COMMENT '刷新令牌',
@@ -26,12 +26,6 @@ CREATE TABLE `user` (
   INDEX `idx_role` (`role`),
   INDEX `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表(学生+管理员)';
-
--- 默认管理员账号（密码: 123456）
-INSERT INTO `user` (`username`, `password`, `nickname`, `email`, `role`) VALUES
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 'admin@aicompanion.com', 'ADMIN'),
-('admin02', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '运营管理员', 'admin02@aicompanion.com', 'ADMIN'),
-('admin03', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '内容管理员', 'admin03@aicompanion.com', 'ADMIN');
 
 -- ============================================================
 -- 2. 技能树表（自关联树形结构）
@@ -51,13 +45,6 @@ CREATE TABLE `skill` (
   INDEX `idx_category` (`category`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='技能树表';
 
-INSERT INTO `skill` (`name`, `category`, `description`, `level`, `parent_id`, `sort_order`) VALUES
-('Java基础', '后端开发', 'JavaSE核心语法', 1, 0, 1),
-('Spring Boot', '后端开发', 'Spring Boot框架开发', 3, 1, 2),
-('MySQL', '数据库', '关系型数据库', 2, 0, 1),
-('Vue3', '前端开发', 'Vue3 + JavaScript', 2, 0, 1),
-('Docker', '运维部署', '容器化技术', 3, 0, 1);
-
 -- ============================================================
 -- 3. 用户技能关联表（多对多中间表）
 -- ============================================================
@@ -70,6 +57,7 @@ CREATE TABLE `user_skill` (
   `status`      TINYINT  DEFAULT 0 COMMENT '状态: 0=未开始, 1=学习中, 2=已掌握',
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted`     TINYINT  NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0=正常, 1=已删除',
   PRIMARY KEY (`id`),
   UNIQUE INDEX `uk_user_skill` (`user_id`, `skill_id`),
   INDEX `idx_user_id` (`user_id`),
@@ -199,9 +187,10 @@ CREATE TABLE `exam_session` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核会话表';
 
 -- ============================================================
--- 10.ai 调用日志表
+-- 10. AI 调用日志表
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `ai_call_log` (
+DROP TABLE IF EXISTS `ai_call_log`;
+CREATE TABLE `ai_call_log` (
   `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '日志ID',
   `user_id`       BIGINT       DEFAULT NULL COMMENT '用户ID（逻辑关联 user.id，可为空）',
   `call_type`     VARCHAR(50)  NOT NULL COMMENT '调用类型: CHAT/CHAT_STREAM/INTERVIEW/KNOWLEDGE_POINT/LEARNING_PATH',
@@ -214,3 +203,5 @@ CREATE TABLE IF NOT EXISTS `ai_call_log` (
   INDEX `idx_call_type` (`call_type`),
   INDEX `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI调用日志表';
+
+SET FOREIGN_KEY_CHECKS = 1;
