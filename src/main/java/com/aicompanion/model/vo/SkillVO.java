@@ -1,5 +1,6 @@
 package com.aicompanion.model.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -17,6 +18,7 @@ public class SkillVO {
     private String description;
     private Integer level;
     private Long parentId;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
     /**
