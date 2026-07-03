@@ -267,6 +267,8 @@ public class UserServiceImpl implements UserService {
         vo.setEmail(user.getEmail());
         vo.setPhone(user.getPhone());
         vo.setAvatar(user.getAvatar());
+        vo.setProfession(user.getProfession());
+        vo.setBio(user.getBio());
         vo.setRole(user.getRole());
         vo.setStatus(user.getStatus());
         vo.setCreateTime(user.getCreateTime());
@@ -338,7 +340,7 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * 管理员修改用户信息
+     * 修改用户信息（部分更新，只更新非空字段）
      */
     @Override
     public UserVO updateUserById(Long userId, UpdateUserDTO dto) {
@@ -348,36 +350,46 @@ public class UserServiceImpl implements UserService {
         }
 
         // 检查用户名是否被其他用户占用
-        if (!user.getUsername().equals(dto.getUsername())) {
+        if (StringUtils.hasText(dto.getUsername()) && !user.getUsername().equals(dto.getUsername())) {
             LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(User::getUsername, dto.getUsername());
             Long count = userMapper.selectCount(wrapper);
             if (count > 0) {
                 throw new BusinessException(400, "用户名已存在");
             }
+            user.setUsername(dto.getUsername());
         }
 
         // 检查邮箱是否被其他用户占用
-        if (!user.getEmail().equals(dto.getEmail())) {
+        if (StringUtils.hasText(dto.getEmail()) && !user.getEmail().equals(dto.getEmail())) {
             LambdaQueryWrapper<User> emailWrapper = new LambdaQueryWrapper<>();
             emailWrapper.eq(User::getEmail, dto.getEmail());
             Long emailCount = userMapper.selectCount(emailWrapper);
             if (emailCount > 0) {
                 throw new BusinessException(400, "邮箱已被使用");
             }
+            user.setEmail(dto.getEmail());
         }
 
-        // 更新字段
-        user.setUsername(dto.getUsername());
+        // 只更新非空字段
         if (StringUtils.hasText(dto.getPassword())) {
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
-        user.setNickname(StringUtils.hasText(dto.getNickname()) ? dto.getNickname() : dto.getUsername());
-        user.setEmail(dto.getEmail());
-        user.setPhone(dto.getPhone());
+        if (StringUtils.hasText(dto.getNickname())) {
+            user.setNickname(dto.getNickname());
+        }
+        if (StringUtils.hasText(dto.getPhone())) {
+            user.setPhone(dto.getPhone());
+        }
+        if (StringUtils.hasText(dto.getProfession())) {
+            user.setProfession(dto.getProfession());
+        }
+        if (StringUtils.hasText(dto.getBio())) {
+            user.setBio(dto.getBio());
+        }
 
         userMapper.updateById(user);
-        log.info("管理员修改用户成功: {}", dto.getUsername());
+        log.info("修改用户信息成功: userId={}", userId);
 
         return toUserVO(user);
     }

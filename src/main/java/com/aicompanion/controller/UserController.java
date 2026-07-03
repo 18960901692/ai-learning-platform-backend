@@ -108,6 +108,14 @@ public class UserController {
         return Result.success("新增成功", userVO);
     }
 
+    @Operation(summary = "修改当前用户信息", description = "当前登录用户修改自己的信息")
+    @PutMapping("/me")
+    public Result<UserVO> updateCurrentUser(@Valid @RequestBody UpdateUserDTO dto) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        UserVO userVO = userService.updateUserById(userId, dto);
+        return Result.success("修改成功", userVO);
+    }
+
     @Operation(summary = "修改用户信息", description = "管理员修改指定用户的信息")
     @PutMapping("/{id}")
     public Result<UserVO> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserDTO dto) {

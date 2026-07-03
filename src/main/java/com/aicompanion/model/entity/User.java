@@ -57,6 +57,16 @@ public class User extends BaseEntity {
     private Integer status;
 
     /**
+     * 职业
+     */
+    private String profession;
+
+    /**
+     * 个人简介
+     */
+    private String bio;
+
+    /**
      * 记住密码 Token（刷新令牌）
      */
     private String refreshToken;

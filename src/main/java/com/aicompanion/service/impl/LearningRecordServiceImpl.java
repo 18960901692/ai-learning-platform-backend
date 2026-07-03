@@ -127,9 +127,14 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         int newSeconds = (record.getStudySeconds() != null ? record.getStudySeconds() : 0) + 30;
         record.setStudySeconds(newSeconds);
         record.setLastStudyTime(LocalDateTime.now());
+
+        // 根据点亮状态动态计算进度
+        int progress = calculateProgress(record.getUserId(), record.getSkillId(), newSeconds);
+        record.setProgress(progress);
+
         learningRecordMapper.updateById(record);
         checkInService.checkIn(record.getUserId());
-        log.debug("学习心跳: recordId={}, totalSeconds={}", recordId, newSeconds);
+        log.debug("学习心跳: recordId={}, totalSeconds={}, progress={}", recordId, newSeconds, progress);
     }
 
     @Override
@@ -141,7 +146,6 @@ public class LearningRecordServiceImpl implements LearningRecordService {
 
         // 保持 status=1（学习中），不改为 2，只有考核通过后才标记为已完成
         // record.setStatus(2);  // 删除此行
-        record.setProgress(100);
 
         // 取前端本地计时和后端心跳计时的最大值，确保不足30秒的学习也能被记录
         int dbSeconds = record.getStudySeconds() != null ? record.getStudySeconds() : 0;
@@ -149,13 +153,17 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         record.setStudySeconds(finalSeconds);
         record.setLastStudyTime(LocalDateTime.now());
 
+        // 根据点亮状态动态计算进度
+        int progress = calculateProgress(record.getUserId(), record.getSkillId(), finalSeconds);
+        record.setProgress(progress);
+
         learningRecordMapper.updateById(record);
 
         // 根据最终学习时长更新 user_skill 的 level
         updateUserSkillLevel(record.getUserId(), record.getSkillId(), finalSeconds);
 
-        log.info("结束学习: recordId={}, dbSeconds={}, clientSeconds={}, finalSeconds={}",
-                recordId, dbSeconds, clientStudySeconds, finalSeconds);
+        log.info("结束学习: recordId={}, dbSeconds={}, clientSeconds={}, finalSeconds={}, progress={}",
+                recordId, dbSeconds, clientStudySeconds, finalSeconds, progress);
         return toVO(record);
     }
 
@@ -192,12 +200,46 @@ public class LearningRecordServiceImpl implements LearningRecordService {
      * 根据学习时长计算掌握等级
      */
     private int calculateLevelByStudySeconds(int studySeconds) {
-        if (studySeconds < 60) return 0;       // < 1分钟: 未开始
+        if (studySeconds == 0) return 0;       // < 1分钟: 未开始
         if (studySeconds < 300) return 1;      // 1-5分钟: 入门
         if (studySeconds < 900) return 2;      // 5-15分钟: 基础
         if (studySeconds < 1800) return 3;     // 15-30分钟: 熟练
         if (studySeconds < 3600) return 4;     // 30-60分钟: 精通
         return 5;                               // > 60分钟: 专家
+    }
+
+    /**
+     * 根据等级计算进度百分比
+     * level 0-5 对应 0%-100%
+     */
+    private int calculateProgressByLevel(int level) {
+        if (level <= 0) return 0;
+        if (level >= 5) return 100;
+        return level * 20;  // level 1=20%, 2=40%, 3=60%, 4=80%, 5=100%
+    }
+
+    /**
+     * 计算学习进度
+     * 已点亮：100%
+     * 未点亮：按等级计算（level * 20）
+     */
+    private int calculateProgress(Long userId, Long skillId, int studySeconds) {
+        // 查询是否已点亮
+        UserSkill userSkill = userSkillMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserSkill>()
+                        .eq(UserSkill::getUserId, userId)
+                        .eq(UserSkill::getSkillId, skillId)
+                        .last("LIMIT 1")
+        );
+
+        // 已点亮，进度 100%
+        if (userSkill != null && userSkill.getStatus() == 2) {
+            return 100;
+        }
+
+        // 未点亮，按等级计算
+        int level = calculateLevelByStudySeconds(studySeconds);
+        return calculateProgressByLevel(level);
     }
 
     /**
