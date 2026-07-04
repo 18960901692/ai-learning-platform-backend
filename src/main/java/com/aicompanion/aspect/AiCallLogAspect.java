@@ -35,42 +35,45 @@ public class AiCallLogAspect {
     public void learningPathServiceMethods() {}
 
     /**
+     * 切入点：拦截 GrowthReportServiceImpl 的所有 public 方法
+     */
+    @Pointcut("execution(public * com.aicompanion.service.impl.GrowthReportServiceImpl.*(..))")
+    public void growthReportServiceMethods() {}
+
+    /**
      * 环绕通知：记录调用日志
      */
-    @Around("aiChatServiceMethods() || learningPathServiceMethods()")
+    @Around("aiChatServiceMethods() || learningPathServiceMethods() || growthReportServiceMethods()")
     public Object logAiCall(ProceedingJoinPoint joinPoint) throws Throwable {
-        long startTime = System.currentTimeMillis();
         String methodName = joinPoint.getSignature().getName();
         String callType = mapMethodNameToType(methodName);
 
-        // 获取当前用户ID（可能为 null）
+        // 非 AI 调用直接放行，不记录日志（避免污染 ai_call_log 表）
+        if (callType == null) {
+            return joinPoint.proceed();
+        }
+
+        long startTime = System.currentTimeMillis();
         Long userId = getCurrentUserId();
 
         try {
-            // 执行业务方法
             Object result = joinPoint.proceed();
-
-            // 记录成功调用
             long durationMs = System.currentTimeMillis() - startTime;
             aiCallLogService.saveLog(userId, callType, durationMs, 1, null);
-
             log.debug("AI 调用成功: method={}, userId={}, durationMs={}", methodName, userId, durationMs);
-
             return result;
         } catch (Exception e) {
-            // 记录失败调用
             long durationMs = System.currentTimeMillis() - startTime;
             aiCallLogService.saveLog(userId, callType, durationMs, 0, e.getMessage());
-
             log.error("AI 调用失败: method={}, userId={}, durationMs={}, error={}",
                     methodName, userId, durationMs, e.getMessage());
-
             throw e;
         }
     }
 
     /**
      * 将方法名映射为调用类型
+     * 返回 null 表示该方法不是 AI 调用，跳过日志记录
      */
     private String mapMethodNameToType(String methodName) {
         return switch (methodName) {
@@ -79,7 +82,8 @@ public class AiCallLogAspect {
             case "interview" -> "INTERVIEW";
             case "generateKnowledgePoint" -> "KNOWLEDGE_POINT";
             case "getRecommendations", "getRecommendationsWithAi" -> "LEARNING_PATH";
-            default -> "OTHER";
+            case "generateAiAnalysis" -> "GROWTH_REPORT";
+            default -> null;
         };
     }
 
