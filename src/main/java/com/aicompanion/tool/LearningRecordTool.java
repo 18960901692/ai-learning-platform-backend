@@ -33,7 +33,7 @@ public class LearningRecordTool {
         this.currentUserId = userId;
     }
 
-    @Tool(description = "查询当前登录用户的学习记录。返回总学习时长、学习中的技能数、已完成的技能数、连续打卡天数、各技能学习详情。")
+    @Tool(description = "查询当前登录用户的学习记录。返回总学习时长(秒)、学习中的技能数、已完成的技能数、连续打卡天数、各技能学习详情。")
     public LearningRecordInfo getLearningRecords() {
         Long userId = currentUserId;
         log.info("LearningRecordTool 被调用: userId={}", userId);
