@@ -27,4 +27,10 @@ public interface ExamService {
      * 鸿蒙端调用 Dify 阅卷后，将评分结果传给后端保存
      */
     ExamSessionVO saveDifyGrade(Long userId, Long sessionId, String text, int score);
+
+    /**
+     * 清理僵尸考核记录（超时未提交的考核）
+     * @return 清理记录数
+     */
+    int cleanAbandonedExams();
 }

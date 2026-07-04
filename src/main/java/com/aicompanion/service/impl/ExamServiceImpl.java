@@ -243,4 +243,15 @@ public class ExamServiceImpl implements ExamService {
 
         log.info("更新技能为学习中: userId={}, skillId={}", userId, skillId);
     }
+
+    /**
+     * 清理僵尸考核记录：将超过 24 小时未提交的考核标记为 ABANDONED
+     */
+    @Override
+    @Transactional
+    public int cleanAbandonedExams() {
+        int cleaned = examSessionMapper.cleanAbandonedExams(24);
+        log.info("清理僵尸考核记录: 清理数量={}", cleaned);
+        return cleaned;
+    }
 }

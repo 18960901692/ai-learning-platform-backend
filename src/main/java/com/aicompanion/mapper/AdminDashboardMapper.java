@@ -74,7 +74,7 @@ public interface AdminDashboardMapper {
     List<Map<String, Object>> recentLearners();
 
     /**
-     * 最近考核情况 Top 5
+     * 最近考核情况 Top 5（仅展示已完成的考核：通过/未通过）
      */
     @Select("SELECT es.id, u.username, u.nickname, s.name AS skill_name, " +
             "es.total_score, es.pass_score, es.status, " +
@@ -83,6 +83,7 @@ public interface AdminDashboardMapper {
             "JOIN user u ON es.user_id = u.id " +
             "JOIN skill s ON es.skill_id = s.id " +
             "WHERE es.deleted = 0 AND u.deleted = 0 " +
-            "ORDER BY es.start_time DESC LIMIT 5")
+            "  AND es.status IN ('PASSED', 'FAILED') " +
+            "ORDER BY es.end_time DESC LIMIT 5")
     List<Map<String, Object>> recentExams();
 }
