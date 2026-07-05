@@ -2,12 +2,14 @@ package com.aicompanion.controller;
 
 import com.aicompanion.common.response.PageResult;
 import com.aicompanion.common.response.Result;
+import com.aicompanion.model.vo.AdminExamDetailVO;
 import com.aicompanion.model.vo.AdminExamRecordVO;
 import com.aicompanion.service.AdminExamRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,5 +32,11 @@ public class AdminExamRecordController {
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String keyword) {
         return Result.success(adminExamRecordService.getExamRecords(page, pageSize, keyword));
+    }
+
+    @Operation(summary = "获取考核记录详情", description = "管理员查看单条考核记录的详细信息，包含 AI 反馈")
+    @GetMapping("/{id}/detail")
+    public Result<AdminExamDetailVO> getExamDetail(@PathVariable Long id) {
+        return Result.success(adminExamRecordService.getExamDetail(id));
     }
 }
