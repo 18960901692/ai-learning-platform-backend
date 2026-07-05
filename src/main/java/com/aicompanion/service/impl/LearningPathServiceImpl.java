@@ -147,8 +147,20 @@ public class LearningPathServiceImpl implements LearningPathService {
                 "热门技能，很多学员正在学习"));
         }
 
-        // 5. 按优先级排序并返回
-        List<LearningPathVO> result = recommendations.values().stream()
+        // 5. 过滤掉父技能未点亮的推荐（父技能未解锁则子技能不可推荐）
+        List<LearningPathVO> eligible = recommendations.values().stream()
+            .filter(vo -> {
+                Skill skill = skillMap.get(vo.getSkillId());
+                if (skill == null) return false;
+                // 根技能（无父技能）直接放行
+                if (skill.getParentId() == null || skill.getParentId() == 0) return true;
+                // 有父技能的，父技能必须在已掌握集合中
+                return masteredSkillIds.contains(skill.getParentId());
+            })
+            .collect(Collectors.toList());
+
+        // 6. 按优先级排序并返回
+        List<LearningPathVO> result = eligible.stream()
             .sorted((a, b) -> b.getPriority() - a.getPriority())
             .limit(6)
             .collect(Collectors.toList());
