@@ -261,8 +261,14 @@ public class GrowthReportServiceImpl implements GrowthReportService {
             String aiResponse = chatClient.prompt()
                 .system("""
                     你是一位专业的学习成长导师，擅长根据学生的学习数据分析学习状况。
-                    请根据用户的学习数据，生成一份结构化的成长分析报告。
-                    严格返回以下 JSON 格式（不要包含 markdown 代码块标记，直接返回纯 JSON）：
+                    请你调用相关tool,根据用户的学习数据，生成一份结构化的成长分析报告。
+
+                    【重要】输出要求：
+                    1. 只返回纯 JSON，不要在 JSON 前后添加任何说明文字、解释、问候语或前言
+                    2. 不要包含 markdown 代码块标记（不要使用 ```）
+                    3. 第一个字符必须是 {，最后一个字符必须是 }
+
+                    JSON 格式：
                     {
                       "summary": "总体评价，2-3 句话",
                       "strengths": ["做得好的方面，2-3 条"],
@@ -270,7 +276,8 @@ public class GrowthReportServiceImpl implements GrowthReportService {
                       "suggestions": ["具体可执行的改进建议，3 条"],
                       "nextPlan": ["下周推荐学习重点，3 条"]
                     }
-                    要求：
+
+                    内容要求：
                     1. 内容要结合用户实际数据，有针对性
                     2. 语气积极鼓励，指出问题时给出可执行建议
                     3. 每条不超过 50 字
@@ -280,10 +287,10 @@ public class GrowthReportServiceImpl implements GrowthReportService {
                 .content();
 
             log.info("AI 成长分析生成成功");
-            return parseAiResponse(aiResponse);
+            return parseAiResponse(aiResponse, vo);
         } catch (Exception e) {
             log.warn("AI 成长分析生成失败，返回默认分析", e);
-            return defaultAnalysis();
+            return defaultAnalysis(vo);
         }
     }
 
@@ -329,13 +336,22 @@ public class GrowthReportServiceImpl implements GrowthReportService {
 
     /**
      * 解析 AI 返回的 JSON
+     * 容错策略：
+     * 1. 兼容 markdown 代码块包裹（```json ... ```）
+     * 2. 容错 AI 在 JSON 前后附加说明文字（提取第一个 { 到最后一个 }）
      */
-    private AiReportAnalysis parseAiResponse(String aiResponse) {
+    private AiReportAnalysis parseAiResponse(String aiResponse, WeeklyReportVO vo) {
         try {
-            // 兼容 AI 可能返回的 markdown 代码块包裹
             String json = aiResponse.trim();
+            // 1. 兼容 AI 可能返回的 markdown 代码块包裹
             if (json.startsWith("```")) {
                 json = json.replaceAll("^```(json)?\\s*", "").replaceAll("\\s*```$", "");
+            }
+            // 2. 容错：AI 可能在 JSON 前后附加说明文字，提取第一个 { 到最后一个 } 之间的子串
+            int firstBrace = json.indexOf('{');
+            int lastBrace = json.lastIndexOf('}');
+            if (firstBrace >= 0 && lastBrace > firstBrace) {
+                json = json.substring(firstBrace, lastBrace + 1);
             }
 
             AiReportAnalysis analysis = objectMapper.readValue(json, AiReportAnalysis.class);
@@ -347,17 +363,35 @@ public class GrowthReportServiceImpl implements GrowthReportService {
             return analysis;
         } catch (Exception e) {
             log.warn("解析 AI 响应失败，使用默认分析: {}", e.getMessage());
-            return defaultAnalysis();
+            return defaultAnalysis(vo);
         }
     }
 
     /**
-     * 默认分析（AI 调用失败时的兜底）
+     * 默认分析（AI 调用或解析失败时的兜底，使用真实数据生成基础文案）
      */
-    private AiReportAnalysis defaultAnalysis() {
+    private AiReportAnalysis defaultAnalysis(WeeklyReportVO vo) {
         AiReportAnalysis analysis = new AiReportAnalysis();
-        analysis.setSummary("本期学习数据已为你整理完毕，继续保持学习热情！");
-        analysis.getStrengths().add("坚持学习是最大的进步");
+        // 用真实数据生成 summary，避免完全无信息
+        String summary = String.format(
+            "本期总学习时长 %s，日均 %s，已点亮技能 %d 个，连续打卡 %d 天。继续保持学习热情！",
+            formatSeconds(vo.getTotalStudySeconds()),
+            formatSeconds(vo.getAvgDailySeconds()),
+            vo.getMasteredCount(),
+            vo.getConsecutiveDays()
+        );
+        analysis.setSummary(summary);
+
+        if (vo.getNewMasteredCount() > 0) {
+            analysis.getStrengths().add(String.format("本期新点亮了 %d 个技能", vo.getNewMasteredCount()));
+        }
+        if (vo.getConsecutiveDays() > 0) {
+            analysis.getStrengths().add(String.format("已连续打卡 %d 天", vo.getConsecutiveDays()));
+        }
+        if (analysis.getStrengths().isEmpty()) {
+            analysis.getStrengths().add("坚持学习是最大的进步");
+        }
+
         analysis.getSuggestions().add("保持稳定的学习节奏");
         analysis.getSuggestions().add("多参与 AI 对话和面试练习");
         analysis.getNextPlan().add("继续推进正在学习的技能");
