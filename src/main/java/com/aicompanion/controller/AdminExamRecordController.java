@@ -25,13 +25,14 @@ public class AdminExamRecordController {
 
     private final AdminExamRecordService adminExamRecordService;
 
-    @Operation(summary = "分页查询考核记录", description = "管理员分页查询所有考核记录,支持按用户名搜索")
+    @Operation(summary = "分页查询考核记录", description = "管理员分页查询所有考核记录,支持按用户名搜索和状态筛选")
     @GetMapping("/list")
     public Result<PageResult<AdminExamRecordVO>> getExamRecords(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) String keyword) {
-        return Result.success(adminExamRecordService.getExamRecords(page, pageSize, keyword));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status) {
+        return Result.success(adminExamRecordService.getExamRecords(page, pageSize, keyword, status));
     }
 
     @Operation(summary = "获取考核记录详情", description = "管理员查看单条考核记录的详细信息，包含 AI 反馈")

@@ -15,9 +15,10 @@ public interface AdminExamRecordService {
      * @param page     页码
      * @param pageSize 每页大小
      * @param keyword  搜索关键词(用户名)
+     * @param status   状态筛选(PASSED/FAILED)
      * @return 分页结果
      */
-    PageResult<AdminExamRecordVO> getExamRecords(int page, int pageSize, String keyword);
+    PageResult<AdminExamRecordVO> getExamRecords(int page, int pageSize, String keyword, String status);
 
     /**
      * 获取考核记录详情

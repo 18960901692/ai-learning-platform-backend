@@ -37,6 +37,9 @@ public interface AdminExamRecordMapper {
         "JOIN skill s ON es.skill_id = s.id ",
         "WHERE es.deleted = 0 AND u.deleted = 0 ",
         "  AND es.status IN ('PASSED', 'FAILED') ",
+        "<if test='status != null and status != \"\"'>",
+        "  AND es.status = #{status} ",
+        "</if>",
         "<if test='keyword != null and keyword != \"\"'>",
         "  AND u.username LIKE CONCAT('%', #{keyword}, '%') ",
         "</if>",
@@ -46,12 +49,13 @@ public interface AdminExamRecordMapper {
     })
     List<AdminExamRecordVO> selectExamRecords(
         @Param("keyword") String keyword,
+        @Param("status") String status,
         @Param("offset") int offset,
         @Param("pageSize") int pageSize
     );
 
     /**
-     * 查询考核记录总数(支持按用户名搜索，仅统计已完成的考核)
+     * 查询考核记录总数(支持按用户名搜索和状态筛选，仅统计已完成的考核)
      */
     @Select({
         "<script>",
@@ -60,10 +64,13 @@ public interface AdminExamRecordMapper {
         "JOIN user u ON es.user_id = u.id ",
         "WHERE es.deleted = 0 AND u.deleted = 0 ",
         "  AND es.status IN ('PASSED', 'FAILED') ",
+        "<if test='status != null and status != \"\"'>",
+        "  AND es.status = #{status} ",
+        "</if>",
         "<if test='keyword != null and keyword != \"\"'>",
         "  AND u.username LIKE CONCAT('%', #{keyword}, '%') ",
         "</if>",
         "</script>"
     })
-    long countExamRecords(@Param("keyword") String keyword);
+    long countExamRecords(@Param("keyword") String keyword, @Param("status") String status);
 }

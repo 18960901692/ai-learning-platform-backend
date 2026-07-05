@@ -23,12 +23,13 @@ public class AdminLearningRecordController {
 
     private final AdminLearningRecordService adminLearningRecordService;
 
-    @Operation(summary = "分页查询学习记录", description = "管理员分页查询所有用户的学习记录，支持按用户名/昵称搜索")
+    @Operation(summary = "分页查询学习记录", description = "管理员分页查询所有用户的学习记录，支持按用户名/昵称搜索和状态筛选")
     @GetMapping("/list")
     public Result<PageResult<AdminLearningRecordVO>> getLearningRecords(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) String keyword) {
-        return Result.success(adminLearningRecordService.getLearningRecords(page, pageSize, keyword));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer status) {
+        return Result.success(adminLearningRecordService.getLearningRecords(page, pageSize, keyword, status));
     }
 }

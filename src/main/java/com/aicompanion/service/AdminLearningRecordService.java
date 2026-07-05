@@ -14,7 +14,8 @@ public interface AdminLearningRecordService {
      * @param page     页码
      * @param pageSize 每页大小
      * @param keyword  搜索关键词（用户名/昵称）
+     * @param status   状态筛选(0=未开始,1=学习中,2=已完成)
      * @return 分页结果
      */
-    PageResult<AdminLearningRecordVO> getLearningRecords(int page, int pageSize, String keyword);
+    PageResult<AdminLearningRecordVO> getLearningRecords(int page, int pageSize, String keyword, Integer status);
 }

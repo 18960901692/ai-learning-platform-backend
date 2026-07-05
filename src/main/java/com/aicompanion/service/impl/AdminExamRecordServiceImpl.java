@@ -34,12 +34,12 @@ public class AdminExamRecordServiceImpl implements AdminExamRecordService {
     private final SkillMapper skillMapper;
 
     @Override
-    public PageResult<AdminExamRecordVO> getExamRecords(int page, int pageSize, String keyword) {
+    public PageResult<AdminExamRecordVO> getExamRecords(int page, int pageSize, String keyword, String status) {
         int offset = (page - 1) * pageSize;
-        List<AdminExamRecordVO> records = adminExamRecordMapper.selectExamRecords(keyword, offset, pageSize);
-        long total = adminExamRecordMapper.countExamRecords(keyword);
+        List<AdminExamRecordVO> records = adminExamRecordMapper.selectExamRecords(keyword, status, offset, pageSize);
+        long total = adminExamRecordMapper.countExamRecords(keyword, status);
 
-        log.info("查询考核记录: page={}, pageSize={}, keyword={}, total={}", page, pageSize, keyword, total);
+        log.info("查询考核记录: page={}, pageSize={}, keyword={}, status={}, total={}", page, pageSize, keyword, status, total);
 
         return PageResult.of(total, records, page, pageSize);
     }

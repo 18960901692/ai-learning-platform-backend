@@ -21,12 +21,12 @@ public class AdminLearningRecordServiceImpl implements AdminLearningRecordServic
     private final AdminLearningRecordMapper adminLearningRecordMapper;
 
     @Override
-    public PageResult<AdminLearningRecordVO> getLearningRecords(int page, int pageSize, String keyword) {
+    public PageResult<AdminLearningRecordVO> getLearningRecords(int page, int pageSize, String keyword, Integer status) {
         int offset = (page - 1) * pageSize;
-        List<AdminLearningRecordVO> records = adminLearningRecordMapper.selectLearningRecords(keyword, offset, pageSize);
-        long total = adminLearningRecordMapper.countLearningRecords(keyword);
+        List<AdminLearningRecordVO> records = adminLearningRecordMapper.selectLearningRecords(keyword, status, offset, pageSize);
+        long total = adminLearningRecordMapper.countLearningRecords(keyword, status);
 
-        log.info("查询学习记录: page={}, pageSize={}, keyword={}, total={}", page, pageSize, keyword, total);
+        log.info("查询学习记录: page={}, pageSize={}, keyword={}, status={}, total={}", page, pageSize, keyword, status, total);
 
         return PageResult.of(total, records, page, pageSize);
     }
