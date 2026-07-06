@@ -350,6 +350,11 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(404, "用户不存在");
         }
 
+        // 管理员账号不允许被修改
+        if ("ADMIN".equals(user.getRole())) {
+            throw new BusinessException(403, "管理员账号不允许被修改");
+        }
+
         // 检查用户名是否被其他用户占用
         if (StringUtils.hasText(dto.getUsername()) && !user.getUsername().equals(dto.getUsername())) {
             LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
@@ -403,6 +408,11 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(404, "用户不存在");
+        }
+
+        // 管理员账号不允许被删除
+        if ("ADMIN".equals(user.getRole())) {
+            throw new BusinessException(403, "管理员账号不允许被删除");
         }
 
         userMapper.deleteById(userId);
