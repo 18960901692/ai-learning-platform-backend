@@ -36,4 +36,10 @@ public interface LearningRecordService {
      * @param clientStudySeconds 前端本地计时的时长（秒）
      */
     LearningRecordVO endLearning(Long recordId, Integer clientStudySeconds);
+
+    /**
+     * 批量刷盘 Redis 心跳缓冲到 MySQL（由定时任务调用）
+     * @return 成功刷盘的记录数
+     */
+    int flushBufferedHeartbeats();
 }

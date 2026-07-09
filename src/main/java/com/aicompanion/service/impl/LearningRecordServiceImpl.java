@@ -1,5 +1,6 @@
 package com.aicompanion.service.impl;
 
+import com.aicompanion.common.heartbeat.LearningHeartbeatBuffer;
 import com.aicompanion.common.exception.BusinessException;
 import com.aicompanion.mapper.LearningRecordMapper;
 import com.aicompanion.mapper.SkillMapper;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +35,10 @@ public class LearningRecordServiceImpl implements LearningRecordService {
     private final SkillMapper skillMapper;
     private final UserSkillMapper userSkillMapper;
     private final CheckInService checkInService;
+    private final LearningHeartbeatBuffer heartbeatBuffer;
+
+    /** 单次心跳累加秒数 */
+    private static final int HEARTBEAT_SECONDS = 30;
 
     @Override
     public LearningStatsVO getUserLearningStats(Long userId) {
@@ -119,22 +125,12 @@ public class LearningRecordServiceImpl implements LearningRecordService {
 
     @Override
     public void heartbeat(Long recordId) {
-        LearningRecord record = learningRecordMapper.selectById(recordId);
-        if (record == null) {
-            throw new BusinessException(404, "学习记录不存在");
-        }
-
-        int newSeconds = (record.getStudySeconds() != null ? record.getStudySeconds() : 0) + 30;
-        record.setStudySeconds(newSeconds);
-        record.setLastStudyTime(LocalDateTime.now());
-
-        // 根据点亮状态动态计算进度
-        int progress = calculateProgress(record.getUserId(), record.getSkillId(), newSeconds);
-        record.setProgress(progress);
-
-        learningRecordMapper.updateById(record);
-        checkInService.checkIn(record.getUserId());
-        log.debug("学习心跳: recordId={}, totalSeconds={}, progress={}", recordId, newSeconds, progress);
+        // 仅累加到 Redis 缓冲层，不打 DB
+        // studySeconds / lastStudyTime / progress 由定时任务批量刷盘或结束学习时统一结算
+        heartbeatBuffer.accumulate(recordId, HEARTBEAT_SECONDS);
+        // 打卡只需要 userId，这里用 recordId 反查成本较高，交给前端 start 时已打卡，
+        // 心跳阶段的打卡由定时任务刷盘时附带完成，避免每次心跳查 DB
+        log.debug("学习心跳(缓冲): recordId={}, +{}s", recordId, HEARTBEAT_SECONDS);
     }
 
     @Override
@@ -147,9 +143,12 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         // 保持 status=1（学习中），不改为 2，只有考核通过后才标记为已完成
         // record.setStatus(2);  // 删除此行
 
-        // 取前端本地计时和后端心跳计时的最大值，确保不足30秒的学习也能被记录
+        // 先把 Redis 缓冲区中尚未刷盘的秒数取出并合并到 DB 累计值，保证结束时不丢数据
+        int bufferedSeconds = heartbeatBuffer.drain(recordId);
         int dbSeconds = record.getStudySeconds() != null ? record.getStudySeconds() : 0;
-        int finalSeconds = Math.max(dbSeconds, clientStudySeconds != null ? clientStudySeconds : 0);
+        int backendSeconds = dbSeconds + bufferedSeconds;
+        // 再与前端本地计时取最大值，确保不足 30 秒的学习也能被记录
+        int finalSeconds = Math.max(backendSeconds, clientStudySeconds != null ? clientStudySeconds : 0);
         record.setStudySeconds(finalSeconds);
         record.setLastStudyTime(LocalDateTime.now());
 
@@ -159,11 +158,14 @@ public class LearningRecordServiceImpl implements LearningRecordService {
 
         learningRecordMapper.updateById(record);
 
+        // 结束学习触发打卡（心跳阶段未打卡，这里补上）
+        checkInService.checkIn(record.getUserId());
+
         // 根据最终学习时长更新 user_skill 的 level
         updateUserSkillLevel(record.getUserId(), record.getSkillId(), finalSeconds);
 
-        log.info("结束学习: recordId={}, dbSeconds={}, clientSeconds={}, finalSeconds={}, progress={}",
-                recordId, dbSeconds, clientStudySeconds, finalSeconds, progress);
+        log.info("结束学习: recordId={}, dbSeconds={}, buffered={}, clientSeconds={}, finalSeconds={}, progress={}",
+                recordId, dbSeconds, bufferedSeconds, clientStudySeconds, finalSeconds, progress);
         return toVO(record);
     }
 
@@ -287,5 +289,45 @@ public class LearningRecordServiceImpl implements LearningRecordService {
             log.info("更新技能等级: userId={}, skillId={}, level={}, studySeconds={}", userId, skillId, userSkill.getLevel(), studySeconds);
         }
         // 如果已经是"已点亮"(status=2)，不降级
+    }
+
+    /**
+     * 批量刷盘 Redis 心跳缓冲到 MySQL（由定时任务调用）
+     *
+     * <p>将缓冲区中所有待刷盘秒数取出，逐条累加到 learning_record.study_seconds，
+     * 并更新 last_study_time 与 progress。单条失败不影响其他记录。</p>
+     *
+     * @return 成功刷盘的记录数
+     */
+    @Override
+    public int flushBufferedHeartbeats() {
+        Map<Long, Integer> buffered = heartbeatBuffer.drainAll();
+        if (buffered.isEmpty()) {
+            return 0;
+        }
+        int success = 0;
+        for (Map.Entry<Long, Integer> entry : buffered.entrySet()) {
+            Long recordId = entry.getKey();
+            int seconds = entry.getValue();
+            try {
+                LearningRecord record = learningRecordMapper.selectById(recordId);
+                if (record == null) {
+                    log.warn("刷盘跳过: 学习记录不存在 recordId={}", recordId);
+                    continue;
+                }
+                int newSeconds = (record.getStudySeconds() != null ? record.getStudySeconds() : 0) + seconds;
+                record.setStudySeconds(newSeconds);
+                record.setLastStudyTime(LocalDateTime.now());
+                record.setProgress(calculateProgress(record.getUserId(), record.getSkillId(), newSeconds));
+                learningRecordMapper.updateById(record);
+                // 刷盘时顺带打卡
+                checkInService.checkIn(record.getUserId());
+                success++;
+            } catch (Exception e) {
+                log.error("刷盘失败 recordId={}, seconds={}", recordId, seconds, e);
+            }
+        }
+        log.info("心跳批量刷盘完成: 总数={}, 成功={}", buffered.size(), success);
+        return success;
     }
 }

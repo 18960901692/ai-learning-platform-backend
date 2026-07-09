@@ -43,9 +43,6 @@ public class LearningRecordController {
     @PostMapping("/end/{recordId}")
     public Result<LearningRecordVO> endLearning(@PathVariable Long recordId,
                                                   @Valid @RequestBody EndLearningDTO dto) {
-        System.out.println("=== endLearning 被调用 ===");
-        System.out.println("recordId: " + recordId);
-        System.out.println("dto.studySeconds: " + dto.getStudySeconds());
         LearningRecordVO vo = learningRecordService.endLearning(recordId, dto.getStudySeconds());
         return Result.success("学习完成", vo);
     }
