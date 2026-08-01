@@ -16,3 +16,7 @@ target/
 
 ### Logs ###
 *.log
+
+### 配置文件（含数据库密码、API key、JWT secret 等敏感信息） ###
+src/main/resources/application.yml
+src/main/resources/application-*.yml
