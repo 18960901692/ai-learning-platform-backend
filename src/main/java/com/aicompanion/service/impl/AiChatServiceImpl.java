@@ -9,7 +9,6 @@ import com.aicompanion.service.AiChatService;
 import com.aicompanion.tool.LearningRecordTool;
 import com.aicompanion.tool.SkillLookupTool;
 import com.aicompanion.tool.UserSkillAnalysisTool;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -168,7 +167,6 @@ public class AiChatServiceImpl implements AiChatService {
         log.info("AI 流式对话请求: sessionId={}, message={}", sessionId, message);
 
         SseEmitter emitter = new SseEmitter(120000L);
-        ObjectMapper mapper = new ObjectMapper();
         StringBuilder fullReply = new StringBuilder();
 
         Long userId = getCurrentUserId();
@@ -205,7 +203,9 @@ public class AiChatServiceImpl implements AiChatService {
                                 Map<String, String> event = new LinkedHashMap<>();
                                 event.put("event", "message");
                                 event.put("data", chunk);
-                                emitter.send(SseEmitter.event().data(mapper.writeValueAsString(event)));
+                                // 直接传 Map，让 Spring 的 data() 序列化一次即可
+                                // 之前用 mapper.writeValueAsString(event) 会导致 String 被二次序列化
+                                emitter.send(SseEmitter.event().data(event));
                             } catch (IOException e) {
                                 log.error("SSE 发送失败", e);
                                 emitter.completeWithError(e);
@@ -215,7 +215,7 @@ public class AiChatServiceImpl implements AiChatService {
                             try {
                                 Map<String, String> doneEvent = new LinkedHashMap<>();
                                 doneEvent.put("event", "done");
-                                emitter.send(SseEmitter.event().data(mapper.writeValueAsString(doneEvent)));
+                                emitter.send(SseEmitter.event().data(doneEvent));
                             } catch (IOException e) {
                                 log.error("SSE 发送完成事件失败", e);
                             }
@@ -236,7 +236,7 @@ public class AiChatServiceImpl implements AiChatService {
                                 Map<String, String> errorEvent = new LinkedHashMap<>();
                                 errorEvent.put("event", "error");
                                 errorEvent.put("data", error.getMessage());
-                                emitter.send(SseEmitter.event().data(mapper.writeValueAsString(errorEvent)));
+                                emitter.send(SseEmitter.event().data(errorEvent));
                             } catch (IOException e) {
                                 log.error("SSE 发送错误事件失败", e);
                             }
