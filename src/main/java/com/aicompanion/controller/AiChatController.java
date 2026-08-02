@@ -2,6 +2,7 @@ package com.aicompanion.controller;
 
 import com.aicompanion.common.response.Result;
 import com.aicompanion.model.dto.AiChatRequestDTO;
+import com.aicompanion.model.dto.ExamChatRequestDTO;
 import com.aicompanion.model.dto.KnowledgePointRequestDTO;
 import com.aicompanion.service.AiChatService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -59,5 +60,14 @@ public class AiChatController {
     public Result<String> generateKnowledgePoint(@Valid @RequestBody KnowledgePointRequestDTO request) {
         String reply = aiChatService.generateKnowledgePoint(request.getSkillName());
         return Result.success(reply);
+    }
+
+    /**
+     * 流式考核模式（AI 出题 + 阅卷）
+     */
+    @Operation(summary = "流式考核", description = "AI 考核官出题 + 阅卷（打字机效果）")
+    @PostMapping("/exam/stream")
+    public SseEmitter examStream(@Valid @RequestBody ExamChatRequestDTO request) {
+        return aiChatService.examStream(request.getSkillName(), request.getSessionId(), request.getMessage());
     }
 }

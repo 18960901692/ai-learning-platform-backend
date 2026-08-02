@@ -370,4 +370,127 @@ public class AiChatServiceImpl implements AiChatService {
         log.info("知识点生成完成: skillName={}, replyLength={}", skillName, reply.length());
         return reply;
     }
+
+    /**
+     * 流式考核模式（AI 出题 + 阅卷，覆盖系统提示词 + 手动管理 Redis ChatMemory）
+     * 使用独立的 exam-{sessionId} 前缀，避免和普通聊天混淆
+     */
+    @Override
+    public SseEmitter examStream(String skillName, String sessionId, String message) {
+        log.info("AI 考核流式请求: skillName={}, sessionId={}, message={}", skillName, sessionId, message);
+
+        SseEmitter emitter = new SseEmitter(120000L);
+        StringBuilder fullReply = new StringBuilder();
+
+        // 考核会话使用独立的 conversationId
+        String examSessionId = "exam-" + sessionId;
+
+        // 从 Redis 读取历史对话
+        List<Message> history = chatMemory.get(examSessionId);
+        log.info("从 Redis 读取考核历史消息: sessionId={}, count={}", examSessionId, history.size());
+
+        // 构建消息列表：历史 + 当前用户消息
+        List<Message> messages = new ArrayList<>(history);
+        messages.add(new UserMessage(message));
+
+        // 异步执行流式调用
+        CompletableFuture.runAsync(() -> {
+            try {
+                String systemPrompt = String.format("""
+                        你是一位严格的专业技能考核官，正在对考生进行技能评估。
+                        
+                        考核技能：%s
+                        
+                        规则：
+                        1. 你只负责考核「%s」相关的知识和技能
+                        2. 每次只出一道题，不要一次出多个问题
+                        3. 题目类型包含：选择题、判断题、填空题、简答题
+                        4. 第一题请从基础知识开始，之后根据回答情况调整难度
+                        5. 回答正确时给予肯定，错误时给出提示并允许重新回答
+                        6. 每道题考生回答后，先评判对错，再给出正确答案和解析
+                        7. 出满 5 道题后，询问考生是否完成考核
+                        8. 如果考生回答"完成"、"结束"、"提交"或类似词语，请给出最终评分报告
+                        
+                        评分报告格式要求（必须严格按照以下格式输出）：
+                        ## 考核报告
+                        
+                        **总分：X分 / 100分**
+                        
+                        ### 答题详情
+                        1. 第1题：[题目] → [是否正确] → [得分]
+                        2. 第2题：[题目] → [是否正确] → [得分]
+                        3. 第3题：[题目] → [是否正确] → [得分]
+                        4. 第4题：[题目] → [是否正确] → [得分]
+                        5. 第5题：[题目] → [是否正确] → [得分]
+                        
+                        ### 综合评价
+                        [对考生整体表现的简短评价]
+                        
+                        ### 学习建议
+                        [给出针对性的学习建议]
+                        
+                        评分规则：
+                        - 每题 20 分，共 5 题，满分 100 分
+                        - 选择题/判断题答对得满分，答错 0 分
+                        - 简答题根据回答完整度和准确性给 0-20 分
+                        
+                        注意：在最终给出评分报告之前，不要透露评分规则和分数。
+                        语气专业友好，适当给予鼓励。
+                        """, skillName, skillName);
+                chatClient.prompt()
+                        .system(systemPrompt)
+                        .messages(messages)
+                        .stream()
+                        .content()
+                        .doOnNext(chunk -> {
+                            try {
+                                fullReply.append(chunk);
+                                Map<String, String> event = new LinkedHashMap<>();
+                                event.put("event", "message");
+                                event.put("data", chunk);
+                                emitter.send(SseEmitter.event().data(event));
+                            } catch (IOException e) {
+                                log.error("考核 SSE 发送失败", e);
+                                emitter.completeWithError(e);
+                            }
+                        })
+                        .doOnComplete(() -> {
+                            try {
+                                Map<String, String> doneEvent = new LinkedHashMap<>();
+                                doneEvent.put("event", "done");
+                                emitter.send(SseEmitter.event().data(doneEvent));
+                            } catch (IOException e) {
+                                log.error("考核 SSE 发送完成事件失败", e);
+                            }
+                            // 保存到 Redis
+                            List<Message> toSave = new ArrayList<>();
+                            toSave.add(new UserMessage(message));
+                            toSave.add(new AssistantMessage(fullReply.toString()));
+                            chatMemory.add(examSessionId, toSave);
+
+                            emitter.complete();
+                            log.info("AI 考核流式完成: skillName={}, sessionId={}, replyLength={}",
+                                    skillName, sessionId, fullReply.length());
+                        })
+                        .doOnError(error -> {
+                            try {
+                                Map<String, String> errorEvent = new LinkedHashMap<>();
+                                errorEvent.put("event", "error");
+                                errorEvent.put("data", error.getMessage());
+                                emitter.send(SseEmitter.event().data(errorEvent));
+                            } catch (IOException e) {
+                                log.error("考核 SSE 发送错误事件失败", e);
+                            }
+                            log.error("AI 考核流式出错: sessionId={}", sessionId, error);
+                            emitter.completeWithError(error);
+                        })
+                        .subscribe();
+            } catch (Exception e) {
+                log.error("AI 考核流式异常: sessionId={}", sessionId, e);
+                emitter.completeWithError(e);
+            }
+        });
+
+        return emitter;
+    }
 }

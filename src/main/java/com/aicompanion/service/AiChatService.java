@@ -43,4 +43,14 @@ public interface AiChatService {
      * @return 知识点内容
      */
     String generateKnowledgePoint(String skillName);
+
+    /**
+     * 流式考核模式（AI 出题 + 阅卷，覆盖系统提示词）
+     *
+     * @param skillName 技能名称
+     * @param sessionId 会话 ID
+     * @param message   用户消息
+     * @return SseEmitter
+     */
+    SseEmitter examStream(String skillName, String sessionId, String message);
 }
