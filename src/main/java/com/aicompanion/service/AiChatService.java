@@ -28,11 +28,6 @@ public interface AiChatService {
     String generateKnowledgePoint(String skillName);
 
     /**
-     * 流式生成知识点（打字机效果）
-     */
-    SseEmitter streamKnowledgePoint(String skillName);
-
-    /**
      * 流式考核模式（AI 出题 + 阅卷，覆盖系统提示词）
      */
     SseEmitter examStream(String skillName, String sessionId, String message);
