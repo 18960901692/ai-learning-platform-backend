@@ -1,6 +1,8 @@
 package com.aicompanion.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -12,11 +14,13 @@ import java.util.List;
 @Data
 public class SkillVO {
 
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
     private String name;
     private String category;
     private String description;
     private Integer level;
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

@@ -372,6 +372,67 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     /**
+     * 流式生成知识点（打字机效果），每次调用生成不同的知识点
+     */
+    @Override
+    public SseEmitter streamKnowledgePoint(String skillName) {
+        log.info("流式知识点请求: skillName={}", skillName);
+
+        SseEmitter emitter = new SseEmitter(120000L);
+        StringBuilder fullReply = new StringBuilder();
+
+        // 生成随机知识点编号，确保每次调用内容不同
+        long seed = System.currentTimeMillis() % 10000;
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                chatClient.prompt()
+                        .system("""
+                                你是一位专业的编程知识导师。请根据用户指定的技能，生成一个核心知识点。
+                                规则：
+                                1. 每次只输出一个知识点，不要列出多个
+                                2. 知识点要实用、有深度，适合学习
+                                3. 输出格式：
+                                   【知识点标题】
+                                   简要说明（1-2句话）
+                                   核心要点（3-5条，用数字编号）
+                                   示例代码（如有必要，用代码块包裹）
+                                   学习建议（1句话）
+                                4. 每次调用时生成不同的知识点，不要重复
+                                5. 知识点必须与用户指定的技能直接相关
+                                """)
+                        .user("请为「" + skillName + "」这个技能生成一个相关的核心知识点（编号：" + seed + "）")
+                        .stream()
+                        .content()
+                        .doOnNext(chunk -> {
+                            try {
+                                fullReply.append(chunk);
+                                emitter.send(SseEmitter.event().data(chunk));
+                            } catch (IOException e) {
+                                log.error("知识点 SSE 发送失败", e);
+                                emitter.completeWithError(e);
+                            }
+                        })
+                        .doOnComplete(() -> {
+                            emitter.complete();
+                            log.info("流式知识点完成: skillName={}, replyLength={}",
+                                    skillName, fullReply.length());
+                        })
+                        .doOnError(error -> {
+                            log.error("流式知识点出错: skillName={}", skillName, error);
+                            emitter.completeWithError(error);
+                        })
+                        .subscribe();
+            } catch (Exception e) {
+                log.error("流式知识点异常: skillName={}", skillName, e);
+                emitter.completeWithError(e);
+            }
+        });
+
+        return emitter;
+    }
+
+    /**
      * 流式考核模式（AI 出题 + 阅卷，覆盖系统提示词 + 手动管理 Redis ChatMemory）
      * 使用独立的 exam-{sessionId} 前缀，避免和普通聊天混淆
      */

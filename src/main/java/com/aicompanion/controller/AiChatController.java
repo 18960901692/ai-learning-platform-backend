@@ -63,6 +63,15 @@ public class AiChatController {
     }
 
     /**
+     * 流式生成知识点（用于技能学习页面，打字机效果）
+     */
+    @Operation(summary = "流式知识点", description = "流式生成知识点（打字机效果）")
+    @PostMapping("/knowledge-point/stream")
+    public SseEmitter streamKnowledgePoint(@Valid @RequestBody KnowledgePointRequestDTO request) {
+        return aiChatService.streamKnowledgePoint(request.getSkillName());
+    }
+
+    /**
      * 流式考核模式（AI 出题 + 阅卷）
      */
     @Operation(summary = "流式考核", description = "AI 考核官出题 + 阅卷（打字机效果）")

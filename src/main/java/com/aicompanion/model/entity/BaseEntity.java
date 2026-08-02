@@ -1,6 +1,8 @@
 package com.aicompanion.model.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -13,9 +15,10 @@ import java.time.LocalDateTime;
 public abstract class BaseEntity implements Serializable {
 
     /**
-     * 主键ID
+     * 主键ID（序列化为字符串，避免 JavaScript 精度丢失）
      */
     @TableId(type = IdType.ASSIGN_ID)
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
