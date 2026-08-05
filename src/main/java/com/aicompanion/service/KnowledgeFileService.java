@@ -12,6 +12,7 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.core.io.PathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -44,6 +45,7 @@ public class KnowledgeFileService {
     /**
      * 上传文件到知识库
      */
+    @Transactional(rollbackFor = Exception.class)
     public KnowledgeFile uploadFile(MultipartFile file, String uploadBasePath, Long userId) {
         String originalFilename = file.getOriginalFilename();
 
@@ -84,15 +86,7 @@ public class KnowledgeFileService {
             chunk.getMetadata().put("source", originalFilename);
         }
 
-        // 5. 分批向量化并存入 Redis VectorStore（DashScope Embedding 批量上限 10）
-        int batchSize = 10;
-        for (int i = 0; i < chunks.size(); i += batchSize) {
-            List<Document> batch = chunks.subList(i, Math.min(i + batchSize, chunks.size()));
-            vectorStore.add(batch);
-            log.info("向量化进度: {}/{}", Math.min(i + batchSize, chunks.size()), chunks.size());
-        }
-
-        // 6. 保存元数据到 MySQL
+        // 5. 先入库 MySQL（事务保护，失败时自动回滚）
         List<String> docIds = chunks.stream()
                 .map(Document::getId)
                 .collect(Collectors.toList());
@@ -113,6 +107,32 @@ public class KnowledgeFileService {
 
         knowledgeFileMapper.insert(record);
         log.info("文件已入库: {} ({} 片段)", originalFilename, chunks.size());
+
+        // 6. 分批向量化并存入 Redis VectorStore（DashScope Embedding 批量上限 10）
+        //    若向量化失败，清理已存储的向量和磁盘文件，并抛出异常触发事务回滚
+        try {
+            int batchSize = 10;
+            for (int i = 0; i < chunks.size(); i += batchSize) {
+                List<Document> batch = chunks.subList(i, Math.min(i + batchSize, chunks.size()));
+                vectorStore.add(batch);
+                log.info("向量化进度: {}/{}", Math.min(i + batchSize, chunks.size()), chunks.size());
+            }
+        } catch (Exception e) {
+            log.error("向量化失败，清理已存储的向量和文件: {}", originalFilename, e);
+            // 清理可能已存储的向量
+            try {
+                vectorStore.delete(docIds);
+            } catch (Exception ignored) {
+                // 忽略清理异常
+            }
+            // 清理磁盘文件
+            try {
+                Files.deleteIfExists(savedPath);
+            } catch (IOException ignored) {
+                // 忽略清理异常
+            }
+            throw new RuntimeException("文件向量化失败: " + originalFilename, e);
+        }
 
         return record;
     }
