@@ -20,3 +20,6 @@ target/
 ### 配置文件（含数据库密码、API key、JWT secret 等敏感信息） ###
 src/main/resources/application.yml
 src/main/resources/application-*.yml
+
+### 本地环境变量（用户自行填写，含敏感信息） ###
+.env
