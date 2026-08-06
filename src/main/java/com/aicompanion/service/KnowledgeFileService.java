@@ -1,7 +1,9 @@
 package com.aicompanion.service;
 
+import com.aicompanion.common.util.SecurityUtil;
 import com.aicompanion.mapper.KnowledgeFileMapper;
 import com.aicompanion.model.entity.KnowledgeFile;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -146,6 +148,13 @@ public class KnowledgeFileService {
             return false;
         }
 
+        // 校验归属：只能删除自己的文件
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        if (!currentUserId.equals(record.getUserId())) {
+            log.warn("越权删除文件: userId={}, ownerId={}, fileId={}", currentUserId, record.getUserId(), fileId);
+            throw new RuntimeException("无权删除该文件");
+        }
+
         // 1. 删除磁盘文件
         Path filePath = Paths.get(uploadBasePath, UPLOAD_SUB_DIR, record.getStoredFilename());
         try {
@@ -172,10 +181,15 @@ public class KnowledgeFileService {
     }
 
     /**
-     * 获取文件列表
+     * 获取当前用户的文件列表（只能看到自己的文件）
      */
     public List<KnowledgeFile> listFiles() {
-        return knowledgeFileMapper.selectList(null);
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        return knowledgeFileMapper.selectList(
+                new LambdaQueryWrapper<KnowledgeFile>()
+                        .eq(KnowledgeFile::getUserId, currentUserId)
+                        .orderByDesc(KnowledgeFile::getCreateTime)
+        );
     }
 
     private String getExtension(String filename) {
