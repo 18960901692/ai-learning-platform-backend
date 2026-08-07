@@ -117,7 +117,6 @@ public class KnowledgeFileService {
             for (int i = 0; i < chunks.size(); i += batchSize) {
                 List<Document> batch = chunks.subList(i, Math.min(i + batchSize, chunks.size()));
                 vectorStore.add(batch);
-                log.info("向量化进度: {}/{}", Math.min(i + batchSize, chunks.size()), chunks.size());
             }
         } catch (Exception e) {
             log.error("向量化失败，清理已存储的向量和文件: {}", originalFilename, e);
