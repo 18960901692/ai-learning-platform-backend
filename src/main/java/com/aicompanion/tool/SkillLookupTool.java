@@ -1,6 +1,5 @@
 package com.aicompanion.tool;
 
-import com.aicompanion.common.util.UserContextHolder;
 import com.aicompanion.mapper.SkillMapper;
 import com.aicompanion.mapper.UserSkillMapper;
 import com.aicompanion.model.entity.Skill;
@@ -9,6 +8,7 @@ import com.aicompanion.model.vo.SkillInfo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -16,7 +16,9 @@ import org.springframework.stereotype.Component;
 /**
  * 技能查询工具 - 查询当前登录用户对指定技能的掌握情况
  *
- * <p>无状态 Bean：userId 从 UserContextHolder（ThreadLocal）取，不存字段。</p>
+ * <p>无状态 Bean：userId 通过 Spring AI ToolContext 参数注入，
+ * 由调用方 chatClient.prompt().toolContext(Map.of("userId", userId)) 传入，
+ * 同步/流式路径都生效（数据级传递，不依赖 ThreadLocal）。</p>
  */
 @Slf4j
 @Component
@@ -28,9 +30,10 @@ public class SkillLookupTool {
 
     @Tool(description = "查询当前登录用户对指定技能的掌握情况。返回技能名称、掌握等级、分类、学习状态。")
     public SkillInfo lookupSkill(
-            @ToolParam(description = "技能名称，如'Java基础'、'MySQL'、'Vue3'") String skillName
+            @ToolParam(description = "技能名称，如'Java基础'、'MySQL'、'Vue3'") String skillName,
+            ToolContext toolContext
     ) {
-        Long userId = UserContextHolder.get();
+        Long userId = (Long) toolContext.getContext().get("userId");
         log.info("SkillLookupTool 被调用: userId={}, skillName={}", userId, skillName);
 
         if (userId == null) {

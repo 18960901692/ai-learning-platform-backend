@@ -1,6 +1,5 @@
 package com.aicompanion.tool;
 
-import com.aicompanion.common.util.UserContextHolder;
 import com.aicompanion.mapper.LearningRecordMapper;
 import com.aicompanion.model.entity.LearningRecord;
 import com.aicompanion.model.vo.LearningRecordInfo;
@@ -8,6 +7,7 @@ import com.aicompanion.service.CheckInService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +17,9 @@ import java.util.List;
 /**
  * 学习记录查询工具 - 查询用户的学习记录（学习时长、完成进度）
  *
- * <p>无状态 Bean：userId 从 UserContextHolder（ThreadLocal）取，不存字段。</p>
+ * <p>无状态 Bean：userId 通过 Spring AI ToolContext 参数注入，
+ * 由调用方 chatClient.prompt().toolContext(Map.of("userId", userId)) 传入，
+ * 同步/流式路径都生效（数据级传递，不依赖 ThreadLocal）。</p>
  */
 @Slf4j
 @Component
@@ -28,8 +30,8 @@ public class LearningRecordTool {
     private final CheckInService checkInService;
 
     @Tool(description = "查询当前登录用户的学习记录。返回总学习时长(秒)、学习中的技能数、已完成的技能数、连续打卡天数、各技能学习详情。")
-    public LearningRecordInfo getLearningRecords() {
-        Long userId = UserContextHolder.get();
+    public LearningRecordInfo getLearningRecords(ToolContext toolContext) {
+        Long userId = (Long) toolContext.getContext().get("userId");
         log.info("LearningRecordTool 被调用: userId={}", userId);
 
         if (userId == null) {

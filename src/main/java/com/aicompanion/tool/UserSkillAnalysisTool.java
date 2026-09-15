@@ -1,6 +1,5 @@
 package com.aicompanion.tool;
 
-import com.aicompanion.common.util.UserContextHolder;
 import com.aicompanion.mapper.SkillMapper;
 import com.aicompanion.mapper.UserSkillMapper;
 import com.aicompanion.model.entity.Skill;
@@ -9,6 +8,7 @@ import com.aicompanion.model.vo.SkillAnalysis;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +20,9 @@ import java.util.stream.Collectors;
 /**
  * 用户技能分析工具 - 分析当前登录用户的技能掌握情况
  *
- * <p>无状态 Bean：userId 从 UserContextHolder（ThreadLocal）取，不存字段。</p>
+ * <p>无状态 Bean：userId 通过 Spring AI ToolContext 参数注入，
+ * 由调用方 chatClient.prompt().toolContext(Map.of("userId", userId)) 传入，
+ * 同步/流式路径都生效（数据级传递，不依赖 ThreadLocal）。</p>
  */
 @Slf4j
 @Component
@@ -31,8 +33,8 @@ public class UserSkillAnalysisTool {
     private final SkillMapper skillMapper;
 
     @Tool(description = "分析当前登录用户的技能掌握情况。返回已掌握的技能列表、学习中的技能列表、未学习的技能列表。")
-    public SkillAnalysis analyzeUserSkills() {
-        Long userId = UserContextHolder.get();
+    public SkillAnalysis analyzeUserSkills(ToolContext toolContext) {
+        Long userId = (Long) toolContext.getContext().get("userId");
         log.info("UserSkillAnalysisTool 被调用: userId={}", userId);
 
         if (userId == null) {
