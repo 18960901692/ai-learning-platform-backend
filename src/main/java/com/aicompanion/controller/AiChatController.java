@@ -1,6 +1,7 @@
 package com.aicompanion.controller;
 
 import com.aicompanion.common.response.Result;
+import com.aicompanion.common.util.SecurityUtil;
 import com.aicompanion.model.dto.AiChatRequestDTO;
 import com.aicompanion.model.dto.ExamChatRequestDTO;
 import com.aicompanion.model.dto.KnowledgePointRequestDTO;
