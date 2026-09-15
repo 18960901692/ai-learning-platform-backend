@@ -12,36 +12,41 @@ public interface DifyService {
      * 调用 Dify /chat-messages（考核 App）
      * 用于多轮考核对话、出题、阅卷
      *
-     * @param skillName      技能名称（inputs.skill_name）
-     * @param query          用户 query / 出题指令 / 阅卷指令
-     * @param conversation   阅卷时的对话记录（inputs.conversation），其他场景传 null
+     * @param userId        当前用户 ID（Dify user 字段，用于隔离会话归属和统计）
+     * @param skillName     技能名称（inputs.skill_name）
+     * @param query         用户 query / 出题指令 / 阅卷指令
+     * @param conversation  阅卷时的对话记录（inputs.conversation），其他场景传 null
      * @param conversationId Dify 会话 ID（多轮对话时传入），首轮传 null
-     * @return Dify 原始响应（包含 answer 和 conversationId）
+     * @return Dify 原始响应（已剥离 answer 中的 <think> 标签）
      */
-    DifyChatResponseVO chat(String skillName, String query, String conversation, String conversationId);
+    DifyChatResponseVO chat(Long userId, String skillName, String query,
+                            String conversation, String conversationId);
 
     /**
      * 生成考核题目
      *
+     * @param userId    当前用户 ID
      * @param skillName 技能名称
      * @return Dify answer 原文（JSON 数组字符串）
      */
-    String generateExamQuestions(String skillName);
+    String generateExamQuestions(Long userId, String skillName);
 
     /**
      * 阅卷评分（内部调 chat + ScoreExtractor）
      *
+     * @param userId       当前用户 ID
      * @param skillName    技能名称
      * @param conversation 完整对话记录
-     * @return 阅卷结果（含评阅文本和提取好的分数）
+     * @return 阅卷结果（含评阅文本和提取好的分数；score = -1 表示无法解析）
      */
-    DifyGradeResultVO gradeExam(String skillName, String conversation);
+    DifyGradeResultVO gradeExam(Long userId, String skillName, String conversation);
 
     /**
      * 调用 Dify /workflows/run（简历优化 Workflow）
      *
+     * @param userId        当前用户 ID
      * @param resumeContent 简历内容
-     * @return 优化后的简历文本
+     * @return 优化后的简历文本；空输出或结构异常时抛业务异常
      */
-    String optimizeResume(String resumeContent);
+    String optimizeResume(Long userId, String resumeContent);
 }

@@ -31,9 +31,9 @@ public class JwtInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String token = SecurityUtil.extractToken(request);
 
-        // 对于 AI 对话接口和 Dify 代理接口，允许未登录访问（Token 为空时放行）
+        // 对于 AI 对话接口，允许未登录访问（Token 为空时放行）
         String uri = request.getRequestURI();
-        if (uri.startsWith("/ai/chat/") || uri.startsWith("/dify/")) {
+        if (uri.startsWith("/ai/chat/")) {
             if (token == null || token.isBlank()) {
                 return true; // 放行，不设置 userId
             }

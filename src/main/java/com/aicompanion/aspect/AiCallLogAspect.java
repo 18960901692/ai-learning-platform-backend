@@ -41,9 +41,15 @@ public class AiCallLogAspect {
     public void growthReportServiceMethods() {}
 
     /**
+     * 切入点：拦截 DifyServiceImpl 的所有 public 方法
+     */
+    @Pointcut("execution(public * com.aicompanion.service.impl.DifyServiceImpl.*(..))")
+    public void difyServiceMethods() {}
+
+    /**
      * 环绕通知：记录调用日志
      */
-    @Around("aiChatServiceMethods() || learningPathServiceMethods() || growthReportServiceMethods()")
+    @Around("aiChatServiceMethods() || learningPathServiceMethods() || growthReportServiceMethods() || difyServiceMethods()")
     public Object logAiCall(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().getName();
         String callType = mapMethodNameToType(methodName);
@@ -83,6 +89,10 @@ public class AiCallLogAspect {
             case "generateKnowledgePoint" -> "KNOWLEDGE_POINT";
             case "getRecommendations", "getRecommendationsWithAi" -> "LEARNING_PATH";
             case "generateAiAnalysis" -> "GROWTH_REPORT";
+            // Dify 代理调用
+            case "generateExamQuestions" -> "DIFY_EXAM_QUESTIONS";
+            case "gradeExam" -> "DIFY_EXAM_GRADE";
+            case "optimizeResume" -> "DIFY_RESUME_OPTIMIZE";
             default -> null;
         };
     }
