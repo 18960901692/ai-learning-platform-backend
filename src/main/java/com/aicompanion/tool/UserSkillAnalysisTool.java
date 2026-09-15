@@ -1,5 +1,6 @@
 package com.aicompanion.tool;
 
+import com.aicompanion.common.util.UserContextHolder;
 import com.aicompanion.mapper.SkillMapper;
 import com.aicompanion.mapper.UserSkillMapper;
 import com.aicompanion.model.entity.Skill;
@@ -18,6 +19,8 @@ import java.util.stream.Collectors;
 
 /**
  * 用户技能分析工具 - 分析当前登录用户的技能掌握情况
+ *
+ * <p>无状态 Bean：userId 从 UserContextHolder（ThreadLocal）取，不存字段。</p>
  */
 @Slf4j
 @Component
@@ -27,18 +30,9 @@ public class UserSkillAnalysisTool {
     private final UserSkillMapper userSkillMapper;
     private final SkillMapper skillMapper;
 
-    /**
-     * 当前请求的用户ID（由 AiChatServiceImpl 在每次调用前设置）
-     */
-    private volatile Long currentUserId;
-
-    public void setCurrentUserId(Long userId) {
-        this.currentUserId = userId;
-    }
-
     @Tool(description = "分析当前登录用户的技能掌握情况。返回已掌握的技能列表、学习中的技能列表、未学习的技能列表。")
     public SkillAnalysis analyzeUserSkills() {
-        Long userId = currentUserId;
+        Long userId = UserContextHolder.get();
         log.info("UserSkillAnalysisTool 被调用: userId={}", userId);
 
         if (userId == null) {

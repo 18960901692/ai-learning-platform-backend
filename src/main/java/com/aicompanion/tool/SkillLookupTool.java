@@ -1,5 +1,6 @@
 package com.aicompanion.tool;
 
+import com.aicompanion.common.util.UserContextHolder;
 import com.aicompanion.mapper.SkillMapper;
 import com.aicompanion.mapper.UserSkillMapper;
 import com.aicompanion.model.entity.Skill;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 技能查询工具 - 查询当前登录用户对指定技能的掌握情况
+ *
+ * <p>无状态 Bean：userId 从 UserContextHolder（ThreadLocal）取，不存字段。</p>
  */
 @Slf4j
 @Component
@@ -23,20 +26,11 @@ public class SkillLookupTool {
     private final UserSkillMapper userSkillMapper;
     private final SkillMapper skillMapper;
 
-    /**
-     * 当前请求的用户ID（由 AiChatServiceImpl 在每次调用前设置）
-     */
-    private volatile Long currentUserId;
-
-    public void setCurrentUserId(Long userId) {
-        this.currentUserId = userId;
-    }
-
     @Tool(description = "查询当前登录用户对指定技能的掌握情况。返回技能名称、掌握等级、分类、学习状态。")
     public SkillInfo lookupSkill(
             @ToolParam(description = "技能名称，如'Java基础'、'MySQL'、'Vue3'") String skillName
     ) {
-        Long userId = currentUserId;
+        Long userId = UserContextHolder.get();
         log.info("SkillLookupTool 被调用: userId={}, skillName={}", userId, skillName);
 
         if (userId == null) {

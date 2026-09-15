@@ -1,5 +1,6 @@
 package com.aicompanion.tool;
 
+import com.aicompanion.common.util.UserContextHolder;
 import com.aicompanion.mapper.LearningRecordMapper;
 import com.aicompanion.model.entity.LearningRecord;
 import com.aicompanion.model.vo.LearningRecordInfo;
@@ -15,6 +16,8 @@ import java.util.List;
 
 /**
  * 学习记录查询工具 - 查询用户的学习记录（学习时长、完成进度）
+ *
+ * <p>无状态 Bean：userId 从 UserContextHolder（ThreadLocal）取，不存字段。</p>
  */
 @Slf4j
 @Component
@@ -24,18 +27,9 @@ public class LearningRecordTool {
     private final LearningRecordMapper learningRecordMapper;
     private final CheckInService checkInService;
 
-    /**
-     * 当前请求的用户ID（由 AiChatServiceImpl 在每次调用前设置）
-     */
-    private volatile Long currentUserId;
-
-    public void setCurrentUserId(Long userId) {
-        this.currentUserId = userId;
-    }
-
     @Tool(description = "查询当前登录用户的学习记录。返回总学习时长(秒)、学习中的技能数、已完成的技能数、连续打卡天数、各技能学习详情。")
     public LearningRecordInfo getLearningRecords() {
-        Long userId = currentUserId;
+        Long userId = UserContextHolder.get();
         log.info("LearningRecordTool 被调用: userId={}", userId);
 
         if (userId == null) {
