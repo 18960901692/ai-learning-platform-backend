@@ -31,25 +31,6 @@ public class JwtInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String token = SecurityUtil.extractToken(request);
 
-        // 对于 AI 对话接口，允许未登录访问（Token 为空时放行）
-        String uri = request.getRequestURI();
-        if (uri.startsWith("/ai/chat/")) {
-            if (token == null || token.isBlank()) {
-                return true; // 放行，不设置 userId
-            }
-            // 有 Token 则验证，但不强制要求
-            if (!jwtUtil.validateToken(token)) {
-                return true; // Token 无效也放行
-            }
-            Long userId = jwtUtil.getUserId(token);
-            String userType = jwtUtil.getUserType(token);
-            User user = userMapper.selectById(userId);
-            if (user != null && user.getStatus() == 1) {
-                SecurityUtil.setCurrentUser(request, userId, userType);
-            }
-            return true;
-        }
-
         if (token == null || token.isBlank()) {
             writeError(response, 401, "未登录，请先登录");
             return false;
