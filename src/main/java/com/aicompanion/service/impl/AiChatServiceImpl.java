@@ -334,16 +334,21 @@ public class AiChatServiceImpl implements AiChatService {
 
     /**
      * 生成知识点（用于技能学习页面）
-     * 每次调用都生成一个不同的知识点，不依赖会话记忆，不走 Tool，不需要 toolContext
+     * 每次调用都生成一个不同的知识点，不依赖会话记忆
+     *
+     * @param userId   当前用户 ID（用于 ToolContext，Spring AI 框架层校验：只要 Tool 方法有 ToolContext 参数，
+     *                              不管模型会不会调工具都必须传非空 context，否则抛 IllegalArgumentException）
+     * @param skillName 技能名称
      */
     @Override
-    public String generateKnowledgePoint(String skillName) {
-        log.info("生成知识点请求: skillName={}", skillName);
+    public String generateKnowledgePoint(Long userId, String skillName) {
+        log.info("生成知识点请求: skillName={}, userId={}", skillName, userId);
 
         // 生成随机知识点编号，确保每次调用内容不同
         long seed = System.currentTimeMillis() % 10000;
 
         String reply = chatClient.prompt()
+                .toolContext(Map.of("userId", userId))
                 .system("""
                         你是一位专业的编程知识导师。请根据用户指定的技能，生成一个核心知识点。
                         规则：

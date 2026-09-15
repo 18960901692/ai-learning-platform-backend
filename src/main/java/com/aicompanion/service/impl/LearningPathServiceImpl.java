@@ -197,6 +197,7 @@ public class LearningPathServiceImpl implements LearningPathService {
         try {
             // 4. 调用 Spring AI 生成推荐理由
             String aiResponse = chatClient.prompt()
+                .toolContext(Map.of("userId", userId))
                 .system("""
                     你是一位专业的学习规划导师，擅长根据用户的学习情况给出个性化的学习建议。
                     请根据用户的学习画像和推荐技能列表，为每个推荐技能生成一条简短的推荐理由（50字以内）。

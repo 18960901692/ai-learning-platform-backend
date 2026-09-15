@@ -58,7 +58,8 @@ public class AiChatController {
     @Operation(summary = "生成知识点", description = "根据技能名称生成一个核心知识点")
     @PostMapping("/knowledge-point")
     public Result<String> generateKnowledgePoint(@Valid @RequestBody KnowledgePointRequestDTO request) {
-        String reply = aiChatService.generateKnowledgePoint(request.getSkillName());
+        Long userId = SecurityUtil.getCurrentUserId();
+        String reply = aiChatService.generateKnowledgePoint(userId, request.getSkillName());
         return Result.success(reply);
     }
 

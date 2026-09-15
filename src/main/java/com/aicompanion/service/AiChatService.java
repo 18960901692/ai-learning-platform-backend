@@ -24,8 +24,11 @@ public interface AiChatService {
 
     /**
      * 生成知识点（用于技能学习页面）
+     *
+     * @param userId   当前用户 ID（用于 ToolContext，防止框架层因缺少 ToolContext 抛异常）
+     * @param skillName 技能名称
      */
-    String generateKnowledgePoint(String skillName);
+    String generateKnowledgePoint(Long userId, String skillName);
 
     /**
      * 流式考核模式（AI 出题 + 阅卷，覆盖系统提示词）

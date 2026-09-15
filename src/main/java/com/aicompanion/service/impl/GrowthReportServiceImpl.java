@@ -70,7 +70,7 @@ public class GrowthReportServiceImpl implements GrowthReportService {
 
         // 复用统计数据构造 prompt（避免重复查询）
         WeeklyReportVO vo = generateReportStats(userId, type);
-        return generateAiAnalysis(vo);
+        return generateAiAnalysis(vo, userId);
     }
 
     /**
@@ -254,11 +254,12 @@ public class GrowthReportServiceImpl implements GrowthReportService {
     /**
      * 调用 Spring AI 生成成长分析
      */
-    private AiReportAnalysis generateAiAnalysis(WeeklyReportVO vo) {
+    private AiReportAnalysis generateAiAnalysis(WeeklyReportVO vo, Long userId) {
         String prompt = buildPrompt(vo);
 
         try {
             String aiResponse = chatClient.prompt()
+                .toolContext(Map.of("userId", userId))
                 .system("""
                     你是一位专业的学习成长导师，擅长根据学生的学习数据分析学习状况。
                     请你调用相关tool,根据用户的学习数据，生成一份结构化的成长分析报告。
