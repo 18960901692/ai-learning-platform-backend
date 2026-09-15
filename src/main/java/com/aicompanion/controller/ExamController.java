@@ -2,7 +2,6 @@ package com.aicompanion.controller;
 
 import com.aicompanion.common.response.Result;
 import com.aicompanion.common.util.SecurityUtil;
-import com.aicompanion.model.dto.DifyGradeDTO;
 import com.aicompanion.model.dto.StartExamDTO;
 import com.aicompanion.model.vo.ExamSessionVO;
 import com.aicompanion.model.vo.StartExamVO;
@@ -23,7 +22,7 @@ public class ExamController {
 
     private final ExamService examService;
 
-    @Operation(summary = "开始考核", description = "开始技能考核，返回会话ID（前端从 Dify 获取题目）")
+    @Operation(summary = "开始考核", description = "开始技能考核，返回会话ID")
     @PostMapping("/start")
     public Result<StartExamVO> startExam(@Valid @RequestBody StartExamDTO dto) {
         Long userId = SecurityUtil.getCurrentUserId();
@@ -36,16 +35,5 @@ public class ExamController {
     public Result<ExamSessionVO> getExamResult(@PathVariable Long sessionId) {
         ExamSessionVO result = examService.getExamResult(sessionId);
         return Result.success(result);
-    }
-
-    @Operation(summary = "保存Dify阅卷结果", description = "鸿蒙端调用Dify阅卷后，将评分结果传给后端保存")
-    @PostMapping("/grade")
-    public Result<ExamSessionVO> saveDifyGrade(@Valid @RequestBody DifyGradeDTO dto) {
-        Long userId = SecurityUtil.getCurrentUserId();
-        log.info("收到保存Dify阅卷请求: userId={}, sessionId={}, score={}, text长度={}", 
-                userId, dto.getSessionId(), dto.getScore(), dto.getText() != null ? dto.getText().length() : 0);
-        
-        ExamSessionVO result = examService.saveDifyGrade(userId, dto.getSessionId(), dto.getText(), dto.getScore());
-        return Result.success("评分已保存", result);
     }
 }
