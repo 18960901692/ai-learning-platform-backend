@@ -70,7 +70,8 @@ public class JwtInterceptor implements HandlerInterceptor {
         }
 
         // 管理端接口强制 ADMIN 角色（用 DB 里的 userRole 而非 token 里的 userType，防篡改）
-        if (request.getRequestURI().startsWith("/admin/") && !"ADMIN".equals(userRole)) {
+        // 注意：必须用 getServletPath()（已去掉 context-path /api），不能用 getRequestURI()（带 /api 前缀会导致永远不匹配）
+        if (request.getServletPath().startsWith("/admin/") && !"ADMIN".equals(userRole)) {
             writeError(response, 403, "无权限访问管理端接口");
             return false;
         }
